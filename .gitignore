@@ -1,0 +1,23 @@
+# 忽略 Visual Studio 的临时缓存文件夹 (最重要)
+.vs/
+
+# 忽略编译生成的调试目录
+Debug/
+Release/
+x64/
+x86/
+
+# 忽略用户特定的配置文件
+*.user
+*.suo
+*.db
+*.ipch
+*.opensdf
+*.sdf
+
+# 忽略编译产生的临时对象文件
+*.obj
+*.exe
+*.dll
+*.pdb
+*.ilk
