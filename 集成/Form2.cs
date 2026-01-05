@@ -30,10 +30,17 @@ namespace 集成
         {
             DataTable dt = null;
 
-            // 通过公共属性 Map1 访问 map1
+            // 优先尝试获取用户在图例中选中的图层
+            if (_gisForm.Map1.Layers.SelectedLayer is MapPolygonLayer selectedLayer)
+            {
+                dt = selectedLayer.DataSet.DataTable;
+                属性表2.DataSource = dt;
+                return; // 成功后直接返回
+            }
+
+            // 如果没选中，再尝试获取第一个图层
             if (_gisForm.Map1.Layers.Count > 0)
             {
-                // 注意：原代码直接强转 Layers[0] 为 MapPolygonLayer 有风险，增加类型校验
                 if (_gisForm.Map1.Layers[0] is MapPolygonLayer stateLayer)
                 {
                     dt = stateLayer.DataSet.DataTable;
@@ -41,7 +48,7 @@ namespace 集成
                 }
                 else
                 {
-                    MessageBox.Show("第一个图层不是面图层！");
+                    MessageBox.Show("第一个图层不是面图层，请先在图例中选择一个面图层。");
                 }
             }
             else
