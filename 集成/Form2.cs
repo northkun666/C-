@@ -1,265 +1,186 @@
 ﻿using DotSpatial.Controls;
+using DotSpatial.Symbology; // 必须引用
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
-using System.Drawing;
+using System.Drawing; // 必须引用 (Font, Color)
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
 namespace 集成
 {
-    public partial class Form2: Form
+    public partial class Form2 : Form
     {
-        public Form2()
-        {
-            InitializeComponent();
-        }
         private readonly gis软件 _gisForm;
 
-        // 重构构造函数，接收 gis软件 实例
+        // 默认字体和颜色
+        private Font _currentFont = new Font("Tahoma", 8f);
+        private Color _currentColor = Color.Black;
+
         public Form2(gis软件 gisForm)
         {
             InitializeComponent();
-            // 校验实例不为空
             _gisForm = gisForm ?? throw new ArgumentNullException(nameof(gisForm));
+        }
+
+        // 辅助方法：获取目标图层
+        private MapPolygonLayer GetTargetLayer()
+        {
+            if (_gisForm.Map1.Layers.SelectedLayer is MapPolygonLayer selectedLayer)
+            {
+                return selectedLayer;
+            }
+            foreach (var layer in _gisForm.Map1.Layers)
+            {
+                if (layer is MapPolygonLayer polygonLayer)
+                {
+                    return polygonLayer;
+                }
+            }
+            return null;
         }
 
         private void b显示_Click(object sender, EventArgs e)
         {
-            DataTable dt = null;
-
-            // 优先尝试获取用户在图例中选中的图层
-            if (_gisForm.Map1.Layers.SelectedLayer is MapPolygonLayer selectedLayer)
-            {
-                dt = selectedLayer.DataSet.DataTable;
-                属性表2.DataSource = dt;
-                return; // 成功后直接返回
-            }
-
-            // 如果没选中，再尝试获取第一个图层
-            if (_gisForm.Map1.Layers.Count > 0)
-            {
-                if (_gisForm.Map1.Layers[0] is MapPolygonLayer stateLayer)
-                {
-                    dt = stateLayer.DataSet.DataTable;
-                    属性表2.DataSource = dt;
-                }
-                else
-                {
-                    MessageBox.Show("第一个图层不是面图层，请先在图例中选择一个面图层。");
-                }
-            }
+            var layer = GetTargetLayer();
+            if (layer != null)
+                属性表2.DataSource = layer.DataSet.DataTable;
             else
-            {
-                MessageBox.Show("请向地图添加图层。");
-            }
+                MessageBox.Show("请先在地图中添加或选择一个面图层（Polygon Layer）。");
         }
 
+        // ★★★ 重点修复：手动创建 MapLabelLayer ★★★
         private void b图层_Click(object sender, EventArgs e)
         {
-            // 1. 基础检查：地图是否有图层
-            if (_gisForm.Map1.Layers.Count > 0)
+            var layer = GetTargetLayer();
+            if (layer == null)
             {
-                // 2. 获取并验证输入
-                string attributeName = textBox1.Text.Trim();
-                if (string.IsNullOrEmpty(attributeName))
-                {
-                    MessageBox.Show("请输入要显示的属性名！");
-                    return;
-                }
+                MessageBox.Show("未找到面图层。");
+                return;
+            }
 
-                // 3. 安全获取图层（修复 "stateLayer" 声明前无法使用的问题）
-                // 使用 'as' 关键字将图层转换为面图层，如果转换失败则 stateLayer 为 null
-                MapPolygonLayer stateLayer = _gisForm.Map1.Layers[0] as MapPolygonLayer;
+            string attributeName = textBox1.Text.Trim();
+            if (string.IsNullOrEmpty(attributeName))
+            {
+                MessageBox.Show("请输入属性名！");
+                return;
+            }
 
-                // 4. 验证图层类型
-                if (stateLayer != null)
-                {
-                    // 5. 检查属性表中是否存在该字段
-                    if (stateLayer.DataSet.DataTable.Columns.Contains(attributeName))
-                    {
-                        // 格式化属性名为标签表达式，例如 "[Name]"
-                        string labelExpression = string.Format("[{0}]", attributeName);
+            if (layer.DataSet.DataTable.Columns.Contains(attributeName))
+            {
+                string labelExpression = string.Format("[{0}]", attributeName);
 
-                        // 6. 添加标签（关键修改：使用您定义的 _currentFont 和 _currentColor 变量）
-                        _gisForm.Map1.AddLabels(stateLayer, labelExpression, _currentFont, _currentColor);
+                // 1. 先清除旧的标签，防止重叠
+                _gisForm.Map1.ClearLabels(layer);
 
-                        MessageBox.Show("已显示 [" + attributeName + "] 标签");
-                    }
-                    else
-                    {
-                        MessageBox.Show("属性表中不存在 [" + attributeName + "] 字段！");
-                    }
-                }
-                else
-                {
-                    MessageBox.Show("第一个图层不是面图层（Polygon Layer），无法显示标签。");
-                }
+                // 2. 手动创建标签图层 (避开 AddLabels 的参数冲突 bug)
+                MapLabelLayer labelLayer = new MapLabelLayer(layer);
+
+                // 3. 设置表达式
+                ILabelCategory category = labelLayer.Symbology.Categories[0];
+                category.Expression = labelExpression;
+
+                // 4. 设置字体和颜色
+                category.Symbolizer.FontFamily = _currentFont.FontFamily.Name;
+                category.Symbolizer.FontSize = _currentFont.Size;
+                category.Symbolizer.FontStyle = _currentFont.Style;
+                category.Symbolizer.FontColor = _currentColor;
+                category.Symbolizer.Orientation = ContentAlignment.MiddleCenter;
+
+                // 5. 添加到地图
+                _gisForm.Map1.Layers.Add(labelLayer);
+
+                MessageBox.Show($"已显示 [{attributeName}] 标签");
             }
             else
             {
-                MessageBox.Show("请先向地图添加图层。");
+                MessageBox.Show($"属性表中不存在 [{attributeName}] 字段！");
             }
         }
 
         private void b选中_Click(object sender, EventArgs e)
         {
-            // 检查地图控件中的图层数量
-            if (_gisForm.Map1.Layers.Count == 0)
-            {
-                MessageBox.Show("请向地图添加图层。");
-                return;
-            }
-
-            // 获取文本框输入的属性名
             string attributeName = textBox1.Text.Trim();
-            if (string.IsNullOrEmpty(attributeName))
-            {
-                MessageBox.Show("请输入要选中的属性名！");
-                return;
-            }
+            if (string.IsNullOrEmpty(attributeName)) return;
 
-            // 验证图层类型
-            if (!(_gisForm.Map1.Layers[0] is MapPolygonLayer stateLayer))
+            if (属性表2.DataSource != null)
             {
-                MessageBox.Show("第一个图层不是面图层！");
-                return;
+                if (属性表2.Columns.Contains(attributeName))
+                {
+                    属性表2.ClearSelection();
+                    属性表2.Columns[attributeName].Selected = true;
+                }
+                else
+                {
+                    MessageBox.Show("表中无此列。");
+                }
             }
-
-            // 检查属性是否存在
-            if (!stateLayer.DataSet.DataTable.Columns.Contains(attributeName))
-            {
-                MessageBox.Show($"属性表中不存在 [{attributeName}] 字段！");
-                return;
-            }
-
-            // 选中属性列
-            foreach (DataGridViewColumn column in 属性表2.Columns)
-            {
-                column.Selected = column.Name == attributeName;
-            }
-
-            MessageBox.Show($"已选中 [{attributeName}] 属性列");
         }
 
         private void b添加_Click(object sender, EventArgs e)
         {
-            // 检查地图控件中的图层数量
-            if (_gisForm.Map1.Layers.Count == 0)
-            {
-                MessageBox.Show("请向地图添加图层。");
-                return;
-            }
+            var layer = GetTargetLayer();
+            if (layer == null) return;
 
-            // 获取文本框输入的属性名
             string newColumnName = textBox1.Text.Trim();
             if (string.IsNullOrEmpty(newColumnName))
             {
-                MessageBox.Show("请输入要添加的属性名！");
+                MessageBox.Show("请输入新属性名。");
                 return;
             }
 
-            // 验证图层类型
-            if (!(_gisForm.Map1.Layers[0] is MapPolygonLayer stateLayer))
+            if (!layer.DataSet.DataTable.Columns.Contains(newColumnName))
             {
-                MessageBox.Show("第一个图层不是面图层！");
-                return;
+                layer.DataSet.DataTable.Columns.Add(new DataColumn(newColumnName, typeof(string)));
+                属性表2.DataSource = null;
+                属性表2.DataSource = layer.DataSet.DataTable;
+                MessageBox.Show($"已添加列: {newColumnName}");
             }
-
-            // 检查属性是否已存在
-            if (stateLayer.DataSet.DataTable.Columns.Contains(newColumnName))
+            else
             {
-                MessageBox.Show($"属性表中已存在 [{newColumnName}] 字段！");
-                return;
+                MessageBox.Show("该列已存在。");
             }
-
-            // 添加新属性列
-            DataColumn newColumn = new DataColumn(newColumnName, typeof(string));
-            stateLayer.DataSet.DataTable.Columns.Add(newColumn);
-
-            // 更新属性表显示
-            属性表2.DataSource = null;
-            属性表2.DataSource = stateLayer.DataSet.DataTable;
-
-            MessageBox.Show($"已添加 [{newColumnName}] 属性列");
         }
 
         private void b删除_Click(object sender, EventArgs e)
         {
-            // 检查地图控件中的图层数量
-            if (_gisForm.Map1.Layers.Count == 0)
-            {
-                MessageBox.Show("请向地图添加图层。");
-                return;
-            }
+            var layer = GetTargetLayer();
+            if (layer == null) return;
 
-            // 获取文本框输入的属性名
             string attributeName = textBox1.Text.Trim();
-            if (string.IsNullOrEmpty(attributeName))
+            if (string.IsNullOrEmpty(attributeName)) return;
+
+            if (attributeName == "PolygonID" || attributeName == "FID")
             {
-                MessageBox.Show("请输入要删除的属性名！");
+                MessageBox.Show("系统关键字段不可删除。");
                 return;
             }
 
-            // 验证图层类型
-            if (!(_gisForm.Map1.Layers[0] is MapPolygonLayer stateLayer))
+            if (layer.DataSet.DataTable.Columns.Contains(attributeName))
             {
-                MessageBox.Show("第一个图层不是面图层！");
-                return;
+                layer.DataSet.DataTable.Columns.Remove(attributeName);
+                属性表2.DataSource = null;
+                属性表2.DataSource = layer.DataSet.DataTable;
+                MessageBox.Show($"已删除列: {attributeName}");
             }
-
-            // 检查属性是否存在
-            if (!stateLayer.DataSet.DataTable.Columns.Contains(attributeName))
+            else
             {
-                MessageBox.Show($"属性表中不存在 [{attributeName}] 字段！");
-                return;
+                MessageBox.Show("找不到该列。");
             }
-
-            // 防止删除关键ID字段
-            if (attributeName == "PolygonID")
-            {
-                MessageBox.Show("不能删除系统自带的ID字段！");
-                return;
-            }
-
-            // 删除属性列
-            stateLayer.DataSet.DataTable.Columns.Remove(attributeName);
-
-            // 更新属性表显示
-            属性表2.DataSource = null;
-            属性表2.DataSource = stateLayer.DataSet.DataTable;
-
-            MessageBox.Show($"已删除 [{attributeName}] 属性列");
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            属性表2.DataSource = null;
-            属性表2.Rows.Clear();
-            // 检查地图控件中的图层数量
-            if (_gisForm.Map1.Layers.Count > 0)
+            var layer = GetTargetLayer();
+            if (layer != null)
             {
-                // 尝试获取第一个图层并验证是否为面图层
-                if (_gisForm.Map1.Layers[0] is MapPolygonLayer stateLayer)
-                {
-                    // 清除该图层的所有标签
-                    _gisForm.Map1.ClearLabels(stateLayer);
-                    MessageBox.Show("已清除属性标签");
-                }
-                else
-                {
-                    MessageBox.Show("第一个图层不是面图层！");
-                }
-            }
-            else
-            {
-                MessageBox.Show("请向地图添加图层。");
+                _gisForm.Map1.ClearLabels(layer);
+                MessageBox.Show("已清除标签。");
             }
         }
-        private Font _currentFont = new Font("Tahoma", 8f);
-        private Color _currentColor = Color.Black;
+
         private void btnSetFont_Click(object sender, EventArgs e)
         {
             if (fontDialog1.ShowDialog() == DialogResult.OK)
@@ -271,8 +192,5 @@ namespace 集成
             if (colorDialog1.ShowDialog() == DialogResult.OK)
                 _currentColor = colorDialog1.Color;
         }
-
-        // 3. 修改现有的显示标签方法
-
     }
 }

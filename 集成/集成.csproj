@@ -65,6 +65,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BLL\GisAnalysisService.cs" />
+    <Compile Include="DAL\FileRepository.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -89,6 +91,7 @@
     <Compile Include="FormProjection.Designer.cs">
       <DependentUpon>FormProjection.cs</DependentUpon>
     </Compile>
+    <Compile Include="Models\PathPoint.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Form1.resx">
