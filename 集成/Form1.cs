@@ -14,7 +14,8 @@ using DotSpatial.Topology;
 // 引入三层架构的命名空间
 using 集成.Models;
 using 集成.BLL;
-using 集成.DAL;
+// 注意：UI层不再直接引用 DAL 命名空间
+// using 集成.DAL; 
 
 namespace 集成
 {
@@ -23,8 +24,10 @@ namespace 集成
         // ---------------------------------------------------------
         // 1. 核心服务实例 (Service Instances)
         // ---------------------------------------------------------
+        // UI 只与 BLL (业务逻辑层) 交互
         private GisAnalysisService _gisService = new GisAnalysisService();
-        private FileRepository _fileRepo = new FileRepository();
+
+        // 已移除 DAL 层的直接引用 (_fileRepo)
 
         public Map Map1 => map1;
 
@@ -59,8 +62,6 @@ namespace 集成
         bool polygonmouseClick = false;
         #endregion
 
-        // 注意：PathPoint 类定义已移至 Models/PathPoint.cs，此处不再定义
-
         public gis软件()
         {
             InitializeComponent();
@@ -93,12 +94,38 @@ namespace 集成
 
             hikingpathPathFinished = true;
             firstClick = true;
-
-            // 如果有需要，取消勾选栅格查询
-            // chbRasterValue.Checked = false;
         }
 
-        // ExtractElevation 方法已移至 BLL 层，此处删除
+        // ---------------------------------------------------------
+        // 新增辅助方法：统一处理保存逻辑 (符合三层架构 UI -> BLL)
+        // ---------------------------------------------------------
+        private void SaveFeatureSet(IFeatureSet fs, string defaultName)
+        {
+            if (fs == null || fs.Features.Count == 0)
+            {
+                MessageBox.Show("没有可保存的数据。");
+                return;
+            }
+
+            // 1. UI 层负责交互：询问用户存到哪里
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.FileName = defaultName;
+            sfd.Filter = "Shapefiles (*.shp)|*.shp";
+
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    // 2. 将路径传递给 BLL 层进行处理
+                    _gisService.SaveShapefile(fs, sfd.FileName);
+                    MessageBox.Show("保存成功！");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("保存失败: " + ex.Message);
+                }
+            }
+        }
 
         #region 基础地图操作 (放大/缩小/平移)
         private void k放大_Click(object sender, EventArgs e)
@@ -280,15 +307,9 @@ namespace 集成
                         // 结束绘制并保存
                         firstClick = true;
                         map1.ResetBuffer();
-                        try
-                        {
-                            // 使用 DAL 保存
-                            _fileRepo.SaveShapefile(lineF, "hiking_path.shp");
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show("保存操作取消或失败: " + ex.Message);
-                        }
+
+                        // 使用新的保存方法，弹出对话框
+                        SaveFeatureSet(lineF, "hiking_path.shp");
 
                         map1.Cursor = Cursors.Arrow;
                         hikingpathPathFinished = true;
@@ -380,26 +401,22 @@ namespace 集成
         }
         #endregion
 
-        #region 保存操作 (使用 DAL)
+        #region 保存操作 (修正为 UI -> BLL)
         private void 保存点ToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            try { _fileRepo.SaveShapefile(pointF, "point.shp"); }
-            catch (Exception ex) { MessageBox.Show(ex.Message); }
+            SaveFeatureSet(pointF, "point.shp");
             ResetToolState();
         }
 
         private void 保存线ToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            // 修正：保存 lineF 而不是 polygonF
-            try { _fileRepo.SaveShapefile(lineF, "line.shp"); }
-            catch (Exception ex) { MessageBox.Show(ex.Message); }
+            SaveFeatureSet(lineF, "line.shp");
             ResetToolState();
         }
 
         private void 保存面ToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            try { _fileRepo.SaveShapefile(polygonF, "polygon.shp"); }
-            catch (Exception ex) { MessageBox.Show(ex.Message); }
+            SaveFeatureSet(polygonF, "polygon.shp");
             ResetToolState();
         }
         #endregion
@@ -428,7 +445,7 @@ namespace 集成
 
                 // 2. 调用 BLL 计算
                 var pathFeature = pathLayer.DataSet.Features[0];
-                List<PathPoint> resultList = _gisService.CalculateHikingProfile(pathFeature, demLayer);
+                List<PathPoint> resultList = _gisService.CalculateHikingProfile(pathFeature, demLayer.DataSet);
 
                 // 3. 显示结果 (UI 职责)
                 Form3 graphForm = new Form3(resultList);
@@ -453,12 +470,13 @@ namespace 集成
 
             try
             {
-                // 调用 BLL
+                // 调用 BLL (BLL负责计算并创建文件)
                 IRaster resultRaster = _gisService.MultiplyRaster(layer.DataSet, 2.0, sfd.FileName);
 
-                // 调用 DAL 保存 (BLL中已创建并赋值，这里显式保存一次确保写入磁盘)
-                _fileRepo.SaveRaster(resultRaster);
+                // 确保数据写入磁盘
+                _gisService.SaveRaster(resultRaster);
 
+                // 添加到地图显示
                 map1.Layers.Add(resultRaster);
                 MessageBox.Show("计算完成。");
             }
@@ -479,6 +497,7 @@ namespace 集成
                 MessageBox.Show("请输入有效数字。"); return;
             }
 
+            // UI 获取路径
             SaveFileDialog sfd = new SaveFileDialog();
             sfd.Filter = "Binary Grid (*.bgd)|*.bgd";
             if (sfd.ShowDialog() != DialogResult.OK) return;
@@ -488,8 +507,10 @@ namespace 集成
                 // 调用 BLL
                 IRaster resultRaster = _gisService.ReclassifyRaster(layer.DataSet, threshold, sfd.FileName);
 
-                _fileRepo.SaveRaster(resultRaster);
+                // 确保数据写入磁盘
+                _gisService.SaveRaster(resultRaster);
 
+                // 添加到地图显示
                 map1.Layers.Add(resultRaster);
                 MessageBox.Show("重分类完成。");
             }

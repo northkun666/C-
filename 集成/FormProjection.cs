@@ -1,6 +1,7 @@
 ﻿using DotSpatial.Controls;
 using DotSpatial.Data;
 using DotSpatial.Projections;
+using DotSpatial.Symbology;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -17,20 +18,117 @@ namespace 集成
         public FormProjection()
         {
             InitializeComponent();
+
+            // 手动初始化地图面板布局，避免在 Designer.cs 中编写逻辑导致设计器崩溃
+            SetupMaps();
         }
+
+        #region 初始化与布局逻辑 (修复设计器问题)
+
+        private void SetupMaps()
+        {
+            // 初始化6个地图面板的布局和控件引用
+            ConfigureMapPanel(pnlMap1, map1, "投影1", 20, 160, ref lblmap1Projection, ref lbltotalAreaMap1, ref lblmap1selectedinfo, ref lblMap1SelectedArea, ref lblmap1info, ref lblmap1difference);
+            ConfigureMapPanel(pnlMap2, map2, "投影2", 470, 160, ref lblmap2Projection, ref lbltotalAreaMap2, ref lblmap2selectedinfo, ref lblMap2SelectedArea, ref lblmap2info, ref lblmap2difference);
+            ConfigureMapPanel(pnlMap3, map3, "投影3", 920, 160, ref lblmap3Projection, ref lbltotalAreaMap3, ref lblmap3selectedinfo, ref lblMap3SelectedArea, ref lblmap3info, ref lblmap3difference);
+
+            ConfigureMapPanel(pnlMap4, map4, "投影4", 20, 520, ref lblmap4Projection, ref lbltotalAreaMap4, ref lblmap4selectedinfo, ref lblMap4SelectedArea, ref lblmap4info, ref lblmap4difference);
+            ConfigureMapPanel(pnlMap5, map5, "投影5", 470, 520, ref lblmap5Projection, ref lbltotalAreaMap5, ref lblmap5selectedinfo, ref lblMap5SelectedArea, ref lblmap5info, ref lblmap5difference);
+            ConfigureMapPanel(pnlMap6, map6, "投影6", 920, 520, ref lblmap6Projection, ref lbltotalAreaMap6, ref lblmap6selectedinfo, ref lblMap6SelectedArea, ref lblmap6info, ref lblmap6difference);
+        }
+
+        private void ConfigureMapPanel(Panel pnl, DotSpatial.Controls.Map map, string title, int x, int y,
+            ref Label lblProj, ref Label lblTotal,
+            ref Label lblSelInfo, ref Label lblSelArea,
+            ref Label lblDiffInfo, ref Label lblDiffVal)
+        {
+            pnl.SuspendLayout();
+            pnl.BorderStyle = BorderStyle.Fixed3D;
+            pnl.Location = new Point(x, y);
+            pnl.Size = new Size(440, 350);
+            pnl.BackColor = SystemColors.ControlLightLight;
+
+            // Map 设置
+            map.Dock = DockStyle.Top;
+            map.Height = 200;
+            map.Legend = null;
+
+            // 标签初始化
+            // 注意：这里实例化 Label 并赋值给 ref 参数，这会更新类级别的字段引用
+            lblProj = new Label
+            {
+                Text = title,
+                ForeColor = Color.DarkRed,
+                Font = new Font("Arial", 9F, FontStyle.Bold),
+                Location = new Point(5, 205),
+                AutoSize = true
+            };
+
+            lblTotal = new Label
+            {
+                Text = "Total Area: -",
+                Location = new Point(5, 230),
+                AutoSize = true
+            };
+
+            lblSelInfo = new Label
+            {
+                Text = "Area of Selected Region:",
+                Location = new Point(5, 255),
+                AutoSize = true,
+                Visible = true
+            };
+
+            lblSelArea = new Label
+            {
+                Text = "0.00",
+                Location = new Point(150, 255),
+                AutoSize = true
+            };
+
+            lblDiffInfo = new Label
+            {
+                Text = "Diff from base:",
+                Location = new Point(5, 280),
+                AutoSize = true,
+                Visible = false
+            };
+
+            lblDiffVal = new Label
+            {
+                Text = "0.00",
+                Location = new Point(150, 280),
+                AutoSize = true,
+                Visible = false
+            };
+
+            // 将控件添加到面板
+            // 检查防止重复添加
+            if (!pnl.Controls.Contains(map)) pnl.Controls.Add(map);
+            pnl.Controls.Add(lblProj);
+            pnl.Controls.Add(lblTotal);
+            pnl.Controls.Add(lblSelInfo);
+            pnl.Controls.Add(lblSelArea);
+            pnl.Controls.Add(lblDiffInfo);
+            pnl.Controls.Add(lblDiffVal);
+
+            pnl.ResumeLayout(false);
+        }
+
+        #endregion
 
         private void btnLoadShapeFile_Click(object sender, EventArgs e)
         {
-            // 1. 定义 6 种不同的全球通用投影，以便展示明显差异
-            // 投影1: WGS84 (经纬度直投，看起来扁平)
+            // 定义 6 种不同的投影以展示差异
             map1.Projection = KnownCoordinateSystems.Geographic.World.WGS1984;
             map2.Projection = KnownCoordinateSystems.Projected.World.WebMercator;
+            // 使用 Proj4 字符串定义其他投影
             map3.Projection = ProjectionInfo.FromProj4String("+proj=moll +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
             map4.Projection = ProjectionInfo.FromProj4String("+proj=robin +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
             map5.Projection = ProjectionInfo.FromProj4String("+proj=aeqd +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
             map6.Projection = ProjectionInfo.FromProj4String("+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
 
-            // 更新界面标签
+            // 更新标签文本
             lblmap1Projection.Text = "投影1: WGS1984 (经纬度直投)";
             lblmap2Projection.Text = "投影2: Web Mercator (墨卡托)";
             lblmap3Projection.Text = "投影3: Mollweide (摩尔威德等积)";
@@ -38,20 +136,18 @@ namespace 集成
             lblmap5Projection.Text = "投影5: North Pole AEQD (北极方位等距)";
             lblmap6Projection.Text = "投影6: Sinusoidal (正弦曲线等积)";
 
-            // 2. 选择文件
             OpenFileDialog fileDialog = new OpenFileDialog();
             fileDialog.Filter = "Shapefiles (*.shp)|*.shp";
-            fileDialog.Title = "请选择一个 Shapefile 文件 (建议选择世界或国家级地图)";
+            fileDialog.Title = "请选择一个 Shapefile 文件";
 
             if (fileDialog.ShowDialog() == DialogResult.OK)
             {
                 try
                 {
-                    ClearAllMaps(); // 清空旧数据
+                    ClearAllMaps();
                     string fileName = fileDialog.FileName;
 
                     // 依次加载到6个地图
-                    // 注意：必须分别为每个地图打开独立的文件副本，才能进行独立的重投影操作
                     LoadAndReproject(map1, fileName);
                     LoadAndReproject(map2, fileName);
                     LoadAndReproject(map3, fileName);
@@ -59,48 +155,42 @@ namespace 集成
                     LoadAndReproject(map5, fileName);
                     LoadAndReproject(map6, fileName);
 
-                    // 填充下拉框 (用第一个地图的数据)
+                    // 填充字段下拉框 (使用第一个地图的数据)
                     if (map1.Layers.Count > 0)
                     {
                         FillColumnNames(map1.Layers[0].DataSet as IFeatureSet);
                     }
 
-                    MessageBox.Show("文件加载并重投影成功！\n请观察不同投影下的形状差异。", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("文件加载并重投影成功！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("加载或重投影时出错: " + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("加载错误: " + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
-        // 核心方法：加载并安全重投影
+        // 加载并执行重投影
         private void LoadAndReproject(DotSpatial.Controls.Map map, string fileName)
         {
             try
             {
-                // 打开文件
                 IFeatureSet featureSet = FeatureSet.Open(fileName);
 
-                // 关键修正：如果源文件没有投影信息 (.prj缺失)，默认为 WGS84
-                // 否则 Reproject() 会因为不知道源坐标系而报错或乱飞
+                // 如果源文件缺失投影信息，默认为 WGS84，防止报错
                 if (featureSet.Projection == null)
                 {
                     featureSet.Projection = KnownCoordinateSystems.Geographic.World.WGS1984;
                 }
 
-                // 执行重投影 (修改内存中的坐标)
+                // 执行重投影
                 featureSet.Reproject(map.Projection);
 
-                // 添加图层
                 map.Layers.Add(featureSet);
-
-                // 关键修正：必须缩放到全图，否则坐标变了之后可能看不见地图
                 map.ZoomToMaxExtent();
             }
             catch (Exception ex)
             {
-                // 单个地图失败不影响其他地图
                 System.Diagnostics.Debug.WriteLine("Map load error: " + ex.Message);
             }
         }
@@ -115,22 +205,11 @@ namespace 集成
 
         private void btnGetTotalArea_Click(object sender, EventArgs e)
         {
-            // Map 1: WGS84 是经纬度，计算结果是"平方度"，不代表物理面积
-            lbltotalAreaMap1.Text = "总面积: " + _getTotalArea(map1).ToString("N2") + " (平方度 - 无物理意义)";
-
-            // Map 2: 墨卡托单位是米，但面积变形极其严重（偏大）
-            lbltotalAreaMap2.Text = "总面积: " + _getTotalArea(map2).ToString("N0") + " (平方米 - 变形严重偏大)";
-
-            // Map 3: 摩尔威德是等积投影，面积准确
+            lbltotalAreaMap1.Text = "总面积: " + _getTotalArea(map1).ToString("N2") + " (平方度)";
+            lbltotalAreaMap2.Text = "总面积: " + _getTotalArea(map2).ToString("N0") + " (平方米 - 变形大)";
             lbltotalAreaMap3.Text = "总面积: " + _getTotalArea(map3).ToString("N0") + " (平方米 - 准确)";
-
-            // Map 4: 罗宾逊是折衷投影，面积有一定变形
-            lbltotalAreaMap4.Text = "总面积: " + _getTotalArea(map4).ToString("N0") + " (平方米 - 轻微变形)";
-
-            // Map 5: 北极方位等距，距离准确但面积有变形
-            lbltotalAreaMap5.Text = "总面积: " + _getTotalArea(map5).ToString("N0") + " (平方米 - 有变形)";
-
-            // Map 6: 正弦曲线是等积投影，面积准确
+            lbltotalAreaMap4.Text = "总面积: " + _getTotalArea(map4).ToString("N0") + " (平方米)";
+            lbltotalAreaMap5.Text = "总面积: " + _getTotalArea(map5).ToString("N0") + " (平方米)";
             lbltotalAreaMap6.Text = "总面积: " + _getTotalArea(map6).ToString("N0") + " (平方米 - 准确)";
         }
 
@@ -198,35 +277,18 @@ namespace 集成
         {
             if (string.IsNullOrEmpty(cmbFiledName.Text) || string.IsNullOrEmpty(cmbSelectedRegion.Text)) return;
 
-            // 更新各个地图的选中面积标签
-            // Map 1
-            double area1 = _getArea(cmbFiledName.Text, cmbSelectedRegion.Text, map1);
-            lblMap1SelectedArea.Text = area1.ToString("N2") + " (平方度)";
+            // 更新各个地图的选中面积
+            lblMap1SelectedArea.Text = _getArea(cmbFiledName.Text, cmbSelectedRegion.Text, map1).ToString("N2") + " (平方度)";
+            lblMap2SelectedArea.Text = _getArea(cmbFiledName.Text, cmbSelectedRegion.Text, map2).ToString("N0") + " (平方米)";
+            lblMap3SelectedArea.Text = _getArea(cmbFiledName.Text, cmbSelectedRegion.Text, map3).ToString("N0") + " (平方米)";
+            lblMap4SelectedArea.Text = _getArea(cmbFiledName.Text, cmbSelectedRegion.Text, map4).ToString("N0") + " (平方米)";
+            lblMap5SelectedArea.Text = _getArea(cmbFiledName.Text, cmbSelectedRegion.Text, map5).ToString("N0") + " (平方米)";
+            lblMap6SelectedArea.Text = _getArea(cmbFiledName.Text, cmbSelectedRegion.Text, map6).ToString("N0") + " (平方米)";
 
-            // Map 2
-            double area2 = _getArea(cmbFiledName.Text, cmbSelectedRegion.Text, map2);
-            lblMap2SelectedArea.Text = area2.ToString("N0") + " (平方米 - 虚高)";
-
-            // Map 3 (基准)
-            double area3 = _getArea(cmbFiledName.Text, cmbSelectedRegion.Text, map3);
-            lblMap3SelectedArea.Text = area3.ToString("N0") + " (平方米 - 准确)";
-
-            // Map 4
-            double area4 = _getArea(cmbFiledName.Text, cmbSelectedRegion.Text, map4);
-            lblMap4SelectedArea.Text = area4.ToString("N0") + " (平方米)";
-
-            // Map 5
-            double area5 = _getArea(cmbFiledName.Text, cmbSelectedRegion.Text, map5);
-            lblMap5SelectedArea.Text = area5.ToString("N0") + " (平方米)";
-
-            // Map 6
-            double area6 = _getArea(cmbFiledName.Text, cmbSelectedRegion.Text, map6);
-            lblMap6SelectedArea.Text = area6.ToString("N0") + " (平方米 - 准确)";
-
-            // 显示所有相关标签
             ToggleLabels(true);
         }
 
+        // 辅助方法：保留此存根以防被引用
         private void UpdateRegionAreaLabel(Label lbl, DotSpatial.Controls.Map map)
         {
             double area = _getArea(cmbFiledName.Text, cmbSelectedRegion.Text, map);
@@ -241,13 +303,12 @@ namespace 集成
                 var layer = map.Layers[0] as MapPolygonLayer;
                 if (layer != null)
                 {
-                    // 查找属性匹配的要素
                     layer.SelectByAttribute($"[{field}] = '{value}'");
                     foreach (IFeature feature in layer.Selection.ToFeatureList())
                     {
                         area += feature.Area();
                     }
-                    layer.UnSelectAll(); // 算完后取消选中
+                    layer.UnSelectAll();
                 }
             }
             return area;
@@ -255,12 +316,14 @@ namespace 集成
 
         private void btnCompareProjections_Click(object sender, EventArgs e)
         {
-            // 以 Map3 (Mollweide 等积投影) 作为面积对比的基准
-            // 因为 Map1 是经纬度，面积单位不同；Map2 是墨卡托，面积变形极大
+            // 以 Map3 (Mollweide 等积投影) 作为基准
             double baseArea;
-            if (!double.TryParse(lblMap3SelectedArea.Text, out baseArea)) return;
+            // 简单解析去除单位文本
+            string map3Text = lblMap3SelectedArea.Text.Split(' ')[0];
 
-            lblmap1difference.Text = "单位不同，不可比";
+            if (!double.TryParse(map3Text, out baseArea)) return;
+
+            lblmap1difference.Text = "N/A";
             lblmap2difference.Text = GetDiff(baseArea, lblMap2SelectedArea.Text);
             lblmap3difference.Text = "基准 (0)";
             lblmap4difference.Text = GetDiff(baseArea, lblMap4SelectedArea.Text);
@@ -273,7 +336,8 @@ namespace 集成
         private string GetDiff(double baseArea, string targetText)
         {
             double target;
-            if (double.TryParse(targetText, out target))
+            string cleanText = targetText.Split(' ')[0];
+            if (double.TryParse(cleanText, out target))
             {
                 double diff = target - baseArea;
                 return diff.ToString("N2");
@@ -301,7 +365,7 @@ namespace 集成
             lblmap6difference.Visible = visible; lblmap6info.Visible = visible;
         }
 
-        // 占位符，防止设计器报错
+        // 事件占位符，防止设计器报错
         private void map6_Load(object sender, EventArgs e) { }
         private void lbltitle_Click(object sender, EventArgs e) { }
         private void label2_Click(object sender, EventArgs e) { }

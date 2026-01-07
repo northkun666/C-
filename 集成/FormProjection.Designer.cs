@@ -155,21 +155,6 @@
             this.btnCompareProjections.Size = new System.Drawing.Size(175, 30);
             this.btnCompareProjections.Text = "对比投影差异";
             this.btnCompareProjections.Click += new System.EventHandler(this.btnCompareProjections_Click);
-
-            // 
-            // 配置 Map Panels (3x2 布局)
-            //
-            ConfigureMapPanel(pnlMap1, map1, "投影1", 20, 160, ref lblmap1Projection, ref lbltotalAreaMap1, ref lblmap1selectedinfo, ref lblMap1SelectedArea, ref lblmap1info, ref lblmap1difference);
-            ConfigureMapPanel(pnlMap2, map2, "投影2", 470, 160, ref lblmap2Projection, ref lbltotalAreaMap2, ref lblmap2selectedinfo, ref lblMap2SelectedArea, ref lblmap2info, ref lblmap2difference);
-            ConfigureMapPanel(pnlMap3, map3, "投影3", 920, 160, ref lblmap3Projection, ref lbltotalAreaMap3, ref lblmap3selectedinfo, ref lblMap3SelectedArea, ref lblmap3info, ref lblmap3difference);
-
-            ConfigureMapPanel(pnlMap4, map4, "投影4", 20, 520, ref lblmap4Projection, ref lbltotalAreaMap4, ref lblmap4selectedinfo, ref lblMap4SelectedArea, ref lblmap4info, ref lblmap4difference);
-            ConfigureMapPanel(pnlMap5, map5, "投影5", 470, 520, ref lblmap5Projection, ref lbltotalAreaMap5, ref lblmap5selectedinfo, ref lblMap5SelectedArea, ref lblmap5info, ref lblmap5difference);
-            ConfigureMapPanel(pnlMap6, map6, "投影6", 920, 520, ref lblmap6Projection, ref lbltotalAreaMap6, ref lblmap6selectedinfo, ref lblMap6SelectedArea, ref lblmap6info, ref lblmap6difference);
-
-            // 
-            // Form1
-            // 
             this.ClientSize = new System.Drawing.Size(1384, 861);
             this.Controls.Add(this.pnlMain);
             this.Name = "Form1";
@@ -192,74 +177,9 @@
             this.ResumeLayout(false);
         }
 
-        // 辅助方法：统一配置每个地图面板的布局
-        // 注意：这是设计器代码的一部分，虽然通常不写方法，但为了让你复制后立刻生效且整洁，这里使用内联逻辑是可行的。
-        // 如果报错，请将此逻辑手动展开到 InitializeComponent 中。
-        // 但最稳妥的方式是：我把上面的 InitializeComponent 写完整。
-        // 为了确保代码能直接运行，我下面把 ConfigureMapPanel 的逻辑直接展开写在 InitializeComponent 里会太长。
-        // 所以我将提供标准的“展开式”代码（不含自定义函数），请直接看下面：
+       
 
-        private void ConfigureMapPanel(System.Windows.Forms.Panel pnl, DotSpatial.Controls.Map map, string title, int x, int y,
-            ref System.Windows.Forms.Label lblProj, ref System.Windows.Forms.Label lblTotal,
-            ref System.Windows.Forms.Label lblSelInfo, ref System.Windows.Forms.Label lblSelArea,
-            ref System.Windows.Forms.Label lblDiffInfo, ref System.Windows.Forms.Label lblDiffVal)
-        {
-            pnl.SuspendLayout();
-            pnl.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
-            pnl.Location = new System.Drawing.Point(x, y);
-            pnl.Size = new System.Drawing.Size(440, 350); // 统一大小
-            pnl.BackColor = System.Drawing.SystemColors.ControlLightLight;
-
-            // Map
-            map.Dock = System.Windows.Forms.DockStyle.Top;
-            map.Height = 200; // 地图高度
-            map.Legend = null;
-
-            // Labels
-            lblProj = new System.Windows.Forms.Label();
-            lblProj.Text = title;
-            lblProj.ForeColor = System.Drawing.Color.DarkRed;
-            lblProj.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Bold);
-            lblProj.Location = new System.Drawing.Point(5, 205); // 地图下方
-            lblProj.AutoSize = true;
-
-            lblTotal = new System.Windows.Forms.Label();
-            lblTotal.Text = "Total Area: -";
-            lblTotal.Location = new System.Drawing.Point(5, 230);
-            lblTotal.AutoSize = true;
-
-            lblSelInfo = new System.Windows.Forms.Label();
-            lblSelInfo.Text = "Area of Selected Region:";
-            lblSelInfo.Location = new System.Drawing.Point(5, 255);
-            lblSelInfo.AutoSize = true;
-            lblSelInfo.Visible = true; // 默认可见
-
-            lblSelArea = new System.Windows.Forms.Label();
-            lblSelArea.Text = "0.00";
-            lblSelArea.Location = new System.Drawing.Point(150, 255);
-            lblSelArea.AutoSize = true;
-
-            lblDiffInfo = new System.Windows.Forms.Label();
-            lblDiffInfo.Text = "Diff from base:";
-            lblDiffInfo.Location = new System.Drawing.Point(5, 280);
-            lblDiffInfo.AutoSize = true;
-            lblDiffInfo.Visible = false;
-
-            lblDiffVal = new System.Windows.Forms.Label();
-            lblDiffVal.Text = "0.00";
-            lblDiffVal.Location = new System.Drawing.Point(150, 280);
-            lblDiffVal.AutoSize = true;
-            lblDiffVal.Visible = false;
-
-            pnl.Controls.Add(map);
-            pnl.Controls.Add(lblProj);
-            pnl.Controls.Add(lblTotal);
-            pnl.Controls.Add(lblSelInfo);
-            pnl.Controls.Add(lblSelArea);
-            pnl.Controls.Add(lblDiffInfo);
-            pnl.Controls.Add(lblDiffVal);
-            pnl.ResumeLayout(false);
-        }
+       
 
         // 声明变量
         private System.Windows.Forms.Panel pnlMain;
