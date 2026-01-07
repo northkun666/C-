@@ -7,13 +7,12 @@ using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
-using 集成.BLL; // 引用业务逻辑层
+using 集成.BLL; 
 
 namespace 集成
 {
     public partial class FormProjection : Form
     {
-        // 实例化业务逻辑服务
         private GisAnalysisService _gisService = new GisAnalysisService();
 
         public FormProjection()
@@ -133,7 +132,6 @@ namespace 集成
 
         private void btnGetTotalArea_Click(object sender, EventArgs e)
         {
-            // 通过调用 _gisService 获取面积，UI 只负责拼接字符串
             lbltotalAreaMap1.Text = "总面积: " + GetTotalAreaFromService(map1).ToString("N2");
             lbltotalAreaMap2.Text = "总面积: " + GetTotalAreaFromService(map2).ToString("N0");
             lbltotalAreaMap3.Text = "总面积: " + GetTotalAreaFromService(map3).ToString("N0");
@@ -158,7 +156,6 @@ namespace 集成
             string field = cmbFiledName.Text;
             string val = cmbSelectedRegion.Text;
 
-            // 调用 Service 计算并更新标签
             UpdateRegionLabel(lblMap1SelectedArea, map1, field, val);
             UpdateRegionLabel(lblMap2SelectedArea, map2, field, val);
             UpdateRegionLabel(lblMap3SelectedArea, map3, field, val);
@@ -174,9 +171,7 @@ namespace 集成
             if (map.Layers.Count > 0 && map.Layers[0] is MapPolygonLayer layer)
             {
                 double area = _gisService.CalculateRegionArea(layer.DataSet, field, val);
-                lbl.Text = area.ToString(map == map1 ? "N2" : "N0"); // Map1 是经纬度，保留2位小数
-
-                // UI 视觉反馈：选中对应的要素
+                lbl.Text = area.ToString(map == map1 ? "N2" : "N0"); 
                 layer.SelectByAttribute($"[{field}] = '{val}'");
             }
         }
@@ -216,7 +211,7 @@ namespace 集成
         private void btnCompareProjections_Click(object sender, EventArgs e)
         {
             double baseArea;
-            string map3Text = lblMap3SelectedArea.Text.Split(' ')[0]; // 简单解析
+            string map3Text = lblMap3SelectedArea.Text.Split(' ')[0]; 
             if (!double.TryParse(map3Text, out baseArea)) return;
 
             lblmap1difference.Text = "N/A";
@@ -255,7 +250,6 @@ namespace 集成
         }
         #endregion
 
-        // 事件占位符
         private void map6_Load(object sender, EventArgs e) { }
         private void lbltitle_Click(object sender, EventArgs e) { }
         private void label2_Click(object sender, EventArgs e) { }

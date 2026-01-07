@@ -19,7 +19,7 @@
             this.pnlMain = new System.Windows.Forms.Panel();
             this.lbltitle = new System.Windows.Forms.Label();
 
-            // 操作面板
+
             this.gbBasicOperations = new System.Windows.Forms.GroupBox();
             this.btnLoadShapeFile = new System.Windows.Forms.Button();
             this.btnGetTotalArea = new System.Windows.Forms.Button();
@@ -32,7 +32,7 @@
             this.btnRegionArea = new System.Windows.Forms.Button();
             this.btnCompareProjections = new System.Windows.Forms.Button();
 
-            // 6个地图面板容器
+
             this.pnlMap1 = new System.Windows.Forms.Panel();
             this.map1 = new DotSpatial.Controls.Map();
             this.pnlMap2 = new System.Windows.Forms.Panel();
@@ -46,8 +46,7 @@
             this.pnlMap6 = new System.Windows.Forms.Panel();
             this.map6 = new DotSpatial.Controls.Map();
 
-            // 初始化标签 (这里使用辅助方法批量创建标签，为了简洁，直接列出关键布局)
-            // Map 1 Labels
+
             this.lblmap1Projection = new System.Windows.Forms.Label();
             this.lbltotalAreaMap1 = new System.Windows.Forms.Label();
             this.lblmap1selectedinfo = new System.Windows.Forms.Label();
@@ -55,8 +54,7 @@
             this.lblmap1info = new System.Windows.Forms.Label();
             this.lblmap1difference = new System.Windows.Forms.Label();
 
-            // ... Map 2-6 Labels (同理，会在下面布局中详细设置)
-            // 为节省篇幅，关键在于下面的 Layout 设置
+
 
             this.pnlMain.SuspendLayout();
             this.gbBasicOperations.SuspendLayout();
@@ -69,14 +67,12 @@
             this.pnlMap6.SuspendLayout();
             this.SuspendLayout();
 
-            // 
-            // pnlMain
-            // 
+
             this.pnlMain.AutoScroll = true;
             this.pnlMain.Controls.Add(this.lbltitle);
             this.pnlMain.Controls.Add(this.gbBasicOperations);
             this.pnlMain.Controls.Add(this.gbAdvancedOperations);
-            // 添加6个地图面板
+
             this.pnlMain.Controls.Add(this.pnlMap1);
             this.pnlMain.Controls.Add(this.pnlMap2);
             this.pnlMain.Controls.Add(this.pnlMap3);
@@ -89,9 +85,7 @@
             this.pnlMain.Size = new System.Drawing.Size(1380, 850);
             this.pnlMain.TabIndex = 0;
 
-            // 
-            // lbltitle
-            // 
+
             this.lbltitle.AutoSize = true;
             this.lbltitle.Font = new System.Drawing.Font("Microsoft YaHei", 16F, System.Drawing.FontStyle.Bold);
             this.lbltitle.ForeColor = System.Drawing.Color.Blue;
@@ -99,9 +93,7 @@
             this.lbltitle.Name = "lbltitle";
             this.lbltitle.Text = "地图投影探索工具 (Projection Explorer)";
 
-            // 
-            // gbBasicOperations
-            // 
+
             this.gbBasicOperations.Location = new System.Drawing.Point(20, 50);
             this.gbBasicOperations.Size = new System.Drawing.Size(200, 100);
             this.gbBasicOperations.Text = "基础操作";
@@ -118,9 +110,7 @@
             this.btnGetTotalArea.Text = "计算总面积";
             this.btnGetTotalArea.Click += new System.EventHandler(this.btnGetTotalArea_Click);
 
-            // 
-            // gbAdvancedOperations
-            // 
+
             this.gbAdvancedOperations.Location = new System.Drawing.Point(240, 50);
             this.gbAdvancedOperations.Size = new System.Drawing.Size(460, 100);
             this.gbAdvancedOperations.Text = "高级操作";
@@ -181,7 +171,6 @@
 
        
 
-        // 声明变量
         private System.Windows.Forms.Panel pnlMain;
         private System.Windows.Forms.Label lbltitle;
         private System.Windows.Forms.GroupBox gbBasicOperations;
@@ -202,7 +191,6 @@
         private System.Windows.Forms.Panel pnlMap5; private DotSpatial.Controls.Map map5;
         private System.Windows.Forms.Panel pnlMap6; private DotSpatial.Controls.Map map6;
 
-        // 标签声明
         private System.Windows.Forms.Label lblmap1Projection; private System.Windows.Forms.Label lbltotalAreaMap1;
         private System.Windows.Forms.Label lblmap1selectedinfo; private System.Windows.Forms.Label lblMap1SelectedArea;
         private System.Windows.Forms.Label lblmap1info; private System.Windows.Forms.Label lblmap1difference;

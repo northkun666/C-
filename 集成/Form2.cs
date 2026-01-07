@@ -1,10 +1,10 @@
 ﻿using DotSpatial.Controls;
-using DotSpatial.Symbology; // 必须引用
+using DotSpatial.Symbology; 
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
-using System.Drawing; // 必须引用 (Font, Color)
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
@@ -15,7 +15,6 @@ namespace 集成
     {
         private readonly gis软件 _gisForm;
 
-        // 默认字体和颜色
         private Font _currentFont = new Font("Tahoma", 8f);
         private Color _currentColor = Color.Black;
 
@@ -25,7 +24,6 @@ namespace 集成
             _gisForm = gisForm ?? throw new ArgumentNullException(nameof(gisForm));
         }
 
-        // 辅助方法：获取目标图层
         private MapPolygonLayer GetTargetLayer()
         {
             if (_gisForm.Map1.Layers.SelectedLayer is MapPolygonLayer selectedLayer)
@@ -51,7 +49,6 @@ namespace 集成
                 MessageBox.Show("请先在地图中添加或选择一个面图层（Polygon Layer）。");
         }
 
-        // ★★★ 重点修复：手动创建 MapLabelLayer ★★★
         private void b图层_Click(object sender, EventArgs e)
         {
             var layer = GetTargetLayer();
@@ -72,24 +69,19 @@ namespace 集成
             {
                 string labelExpression = string.Format("[{0}]", attributeName);
 
-                // 1. 先清除旧的标签，防止重叠
                 _gisForm.Map1.ClearLabels(layer);
 
-                // 2. 手动创建标签图层 (避开 AddLabels 的参数冲突 bug)
                 MapLabelLayer labelLayer = new MapLabelLayer(layer);
 
-                // 3. 设置表达式
                 ILabelCategory category = labelLayer.Symbology.Categories[0];
                 category.Expression = labelExpression;
 
-                // 4. 设置字体和颜色
                 category.Symbolizer.FontFamily = _currentFont.FontFamily.Name;
                 category.Symbolizer.FontSize = _currentFont.Size;
                 category.Symbolizer.FontStyle = _currentFont.Style;
                 category.Symbolizer.FontColor = _currentColor;
                 category.Symbolizer.Orientation = ContentAlignment.MiddleCenter;
 
-                // 5. 添加到地图
                 _gisForm.Map1.Layers.Add(labelLayer);
 
                 MessageBox.Show($"已显示 [{attributeName}] 标签");

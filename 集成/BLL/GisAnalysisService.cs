@@ -1,47 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq; // 用于 SelectIndexByAttribute 等查询
-using DotSpatial.Data;     // 核心数据接口 (IRaster, IFeatureSet 等)
-using DotSpatial.Topology; // 几何类型 (Coordinate, Point 等)
-using 集成.Models;         // 引入 PathPoint 模型
-using 集成.DAL;            // 引入数据访问层
-
+using System.Linq; 
+using DotSpatial.Data;     
+using DotSpatial.Topology; 
+using 集成.Models;         
+using 集成.DAL;            
+using DotSpatial.Symbology;
+using System.Drawing;
 namespace 集成.BLL
 {
     public class GisAnalysisService
     {
-        // 实例化 DAL 对象，处理底层文件操作
         private FileRepository _fileRepo = new FileRepository();
 
-        #region 数据保存方法 (UI -> BLL -> DAL)
-
-        /// <summary>
-        /// 保存矢量文件 (Shapefile)
-        /// </summary>
         public void SaveShapefile(IFeatureSet fs, string filePath)
         {
-            // 这里可以添加业务验证逻辑
             if (fs == null || fs.Features.Count == 0)
                 throw new Exception("没有可保存的要素。");
 
             _fileRepo.SaveShapefile(fs, filePath);
         }
 
-        /// <summary>
-        /// 保存栅格文件
-        /// </summary>
         public void SaveRaster(IRaster raster)
         {
             _fileRepo.SaveRaster(raster);
         }
 
-        #endregion
-
-        #region 面积计算逻辑 (从 FormProjection 迁移过来)
-
-        /// <summary>
-        /// 计算矢量图层中所有要素的总面积
-        /// </summary>
         public double CalculateTotalArea(IFeatureSet featureSet)
         {
             double totalArea = 0;
@@ -49,26 +33,44 @@ namespace 集成.BLL
             {
                 foreach (IFeature feature in featureSet.Features)
                 {
-                    // 注意：面积单位取决于投影坐标系
                     totalArea += feature.Area();
                 }
             }
             return totalArea;
         }
 
-        /// <summary>
-        /// 根据属性查询计算特定区域的面积
-        /// </summary>
+        public ColorScheme GetDynamicElevationScheme(IRaster raster)
+        {
+            if (raster == null) return new ColorScheme();
+
+            if (raster.Minimum == 0 && raster.Maximum == 0 && raster.Value[0, 0] == 0)
+            {
+                raster.GetStatistics(); 
+            }
+
+            double min = raster.Minimum;
+            double max = raster.Maximum;
+            double mid = (min + max) / 2;
+
+            ColorScheme scheme = new ColorScheme();
+
+            var highCat = new ColorCategory(mid, max, Color.Orange, Color.Red);
+            highCat.LegendText = string.Format("High ({0:F0} - {1:F0})", mid, max);
+
+            var lowCat = new ColorCategory(min, mid, Color.Blue, Color.Green);
+            lowCat.LegendText = string.Format("Low ({0:F0} - {1:F0})", min, mid);
+
+            scheme.AddCategory(highCat);
+            scheme.AddCategory(lowCat);
+
+            return scheme;
+        }
+
         public double CalculateRegionArea(IFeatureSet featureSet, string fieldName, string value)
         {
             double area = 0;
             if (featureSet != null)
             {
-                // 使用 SelectByAttribute 获取符合条件的要素索引
-                // 注意：为了不影响 UI 的选中状态，我们只获取索引进行计算，或者需要 UI 层配合清除选中
-                // 这里使用纯数据逻辑：遍历查找
-
-                // 方法A: 遍历所有要素 (性能较低但稳定)
                 foreach (IFeature feature in featureSet.Features)
                 {
                     if (feature.DataRow[fieldName].ToString() == value)
@@ -80,18 +82,13 @@ namespace 集成.BLL
             return area;
         }
 
-        #endregion
-
-        #region 徒步路径计算逻辑
-
-        // 辅助方法：从两点线段中按步长提取高程点
         private List<PathPoint> ExtractElevationSegment(double startX, double startY, double endX, double endY, IRaster raster)
         {
             double curX = startX;
             double curY = startY;
             double curElevation = 0;
             List<PathPoint> pathPointList = new List<PathPoint>();
-            int numberofpoints = 100; // 采样点数量
+            int numberofpoints = 100; 
             double constXdif = ((endX - startX) / numberofpoints);
             double constYdif = ((endY - startY) / numberofpoints);
 
@@ -103,12 +100,10 @@ namespace 集成.BLL
 
                 Coordinate coordinate = new Coordinate(curX, curY);
 
-                // 使用 raster.Bounds 进行坐标转换
                 if (raster.Bounds != null)
                 {
                     RcIndex rowColumn = raster.Bounds.ProjToCell(coordinate);
 
-                    // 边界检查
                     if (rowColumn.Row >= 0 && rowColumn.Row < raster.NumRows &&
                         rowColumn.Column >= 0 && rowColumn.Column < raster.NumColumns)
                     {
@@ -116,7 +111,7 @@ namespace 集成.BLL
                     }
                     else
                     {
-                        curElevation = 0; // 或者设为 NoDataValue
+                        curElevation = 0; 
                     }
                 }
 
@@ -127,10 +122,6 @@ namespace 集成.BLL
             }
             return pathPointList;
         }
-
-        /// <summary>
-        /// 计算完整的徒步路径剖面
-        /// </summary>
         public List<PathPoint> CalculateHikingProfile(IFeature pathFeature, IRaster demRaster)
         {
             // 建议添加投影一致性检查
@@ -166,13 +157,6 @@ namespace 集成.BLL
             return fullPathList;
         }
 
-        #endregion
-
-        #region 栅格运算逻辑
-
-        /// <summary>
-        /// 栅格乘法
-        /// </summary>
         public IRaster MultiplyRaster(IRaster sourceRaster, double multiplier, string outFileName)
         {
             IRaster newRaster = _fileRepo.CreateResultRaster(outFileName, sourceRaster.NumColumns, sourceRaster.NumRows, sourceRaster.DataType, new string[0]);
@@ -195,9 +179,6 @@ namespace 集成.BLL
             return newRaster;
         }
 
-        /// <summary>
-        /// 栅格重分类
-        /// </summary>
         public IRaster ReclassifyRaster(IRaster sourceRaster, double threshold, string outFileName)
         {
             IRaster newRaster = _fileRepo.CreateResultRaster(outFileName, sourceRaster.NumColumns, sourceRaster.NumRows, sourceRaster.DataType, new string[0]);
@@ -219,7 +200,5 @@ namespace 集成.BLL
             }
             return newRaster;
         }
-
-        #endregion
     }
 }

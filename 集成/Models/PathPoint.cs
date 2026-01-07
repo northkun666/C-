@@ -1,5 +1,4 @@
-﻿// Models/PathPoint.cs
-namespace 集成.Models
+﻿namespace 集成.Models
 {
     public class PathPoint
     {

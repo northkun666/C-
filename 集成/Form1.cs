@@ -10,25 +10,20 @@ using DotSpatial.Controls;
 using DotSpatial.Data;
 using DotSpatial.Symbology;
 using DotSpatial.Topology;
-
-// 引入三层架构的命名空间
 using 集成.Models;
 using 集成.BLL;
-// 确保完全不引用 DAL
+
 
 namespace 集成
 {
     public partial class gis软件 : Form
     {
-        // 核心服务实例 (Service Instances)
         private GisAnalysisService _gisService = new GisAnalysisService();
 
         public Map Map1 => map1;
 
-        // 当前操作的形状类型
         string shapeType = "";
 
-        // 类级变量
         bool hikingpathPathFinished = true;
 
         #region 图层变量
@@ -75,7 +70,6 @@ namespace 集成
             firstClick = true;
         }
 
-        // 保存逻辑 (UI -> BLL)
         private void SaveFeatureSet(IFeatureSet fs, string defaultName)
         {
             if (fs == null || fs.Features.Count == 0)
@@ -255,7 +249,7 @@ namespace 集成
             if (!lineF.DataTable.Columns.Contains("ID")) lineF.DataTable.Columns.Add(new DataColumn("ID"));
             lineLayer = (MapLineLayer)map1.Layers.Add(lineF);
             lineLayer.Symbolizer = new LineSymbolizer(Color.Blue, 2);
-            lineLayer.LegendText = "徒步路径（Hiking path）"; // 确保名称唯一，用于后续查找
+            lineLayer.LegendText = "徒步路径（Hiking path）";
             firstClick = true;
         }
         #endregion
@@ -266,7 +260,7 @@ namespace 集成
         private void 保存面ToolStripMenuItem_Click(object sender, EventArgs e) { SaveFeatureSet(polygonF, "polygon.shp"); ResetToolState(); }
         #endregion
 
-        #region 核心业务逻辑 (修复 Bug)
+        #region 核心业务逻辑
 
         private void 计算徒步路径ToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -278,8 +272,6 @@ namespace 集成
                     return;
                 }
                 var demLayer = map1.GetRasterLayers()[0];
-
-                // 修复：不使用 Last()，而是根据 LegendText 精确查找徒步路径图层
                 var pathLayer = map1.GetLineLayers().FirstOrDefault(l => l.LegendText == "徒步路径（Hiking path）");
 
                 if (pathLayer == null || pathLayer.DataSet.Features.Count == 0)
@@ -288,8 +280,7 @@ namespace 集成
                     return;
                 }
 
-                // 调用 BLL
-                var pathFeature = pathLayer.DataSet.Features[0]; // 获取第一条路径
+                var pathFeature = pathLayer.DataSet.Features[0]; 
                 List<PathPoint> resultList = _gisService.CalculateHikingProfile(pathFeature, demLayer.DataSet);
 
                 Form3 graphForm = new Form3(resultList);
@@ -387,16 +378,20 @@ namespace 集成
             {
                 try
                 {
-                    ColorScheme scheme = new ColorScheme();
-                    scheme.AddCategory(new ColorCategory(2500, 3000, Color.Red, Color.Yellow) { LegendText = "High Elevation" });
-                    scheme.AddCategory(new ColorCategory(1000, 2500, Color.Blue, Color.Green) { LegendText = "Low Elevation" });
-                    layer.Symbolizer.Scheme = scheme;
+                   
+                    layer.Symbolizer.Scheme = _gisService.GetDynamicElevationScheme(layer.DataSet);
                     layer.WriteBitmap();
                     map1.Refresh();
                 }
-                catch (Exception ex) { MessageBox.Show("错误: " + ex.Message); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("应用颜色方案失败: " + ex.Message);
+                }
             }
-            else MessageBox.Show("请先选择一个栅格图层。");
+            else
+            {
+                MessageBox.Show("请先选择一个栅格图层。");
+            }
         }
 
         private void chbRasterValue_CheckedChanged(object sender, EventArgs e)
@@ -421,7 +416,6 @@ namespace 集成
         }
         #endregion
 
-        // 空事件处理
         private void groupBox1_Enter(object sender, EventArgs e) { }
         private void txtElevation_TextChanged(object sender, EventArgs e) { }
         private void label1_Click(object sender, EventArgs e) { }
