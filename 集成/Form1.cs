@@ -14,49 +14,34 @@ using DotSpatial.Topology;
 // 引入三层架构的命名空间
 using 集成.Models;
 using 集成.BLL;
-// 注意：UI层不再直接引用 DAL 命名空间
-// using 集成.DAL; 
+// 确保完全不引用 DAL
 
 namespace 集成
 {
     public partial class gis软件 : Form
     {
-        // ---------------------------------------------------------
-        // 1. 核心服务实例 (Service Instances)
-        // ---------------------------------------------------------
-        // UI 只与 BLL (业务逻辑层) 交互
+        // 核心服务实例 (Service Instances)
         private GisAnalysisService _gisService = new GisAnalysisService();
-
-        // 已移除 DAL 层的直接引用 (_fileRepo)
 
         public Map Map1 => map1;
 
-        // 当前操作的形状类型： "Point", "line", "polygon", "hikingPath"
+        // 当前操作的形状类型
         string shapeType = "";
 
-        // ---------------------------------------------------------
-        // 2. 类级变量 (State Variables)
-        // ---------------------------------------------------------
-        #region "类级变量"
-        // 徒步路径绘制完成的布尔变量
+        // 类级变量
         bool hikingpathPathFinished = true;
-        #endregion
 
-        #region 点形状文件类级变量
+        #region 图层变量
         FeatureSet pointF = new FeatureSet(FeatureType.Point);
         int pointID = 0;
         bool pointmouseClick = false;
-        #endregion
 
-        #region 折线形状文件类级变量
         MapLineLayer lineLayer = default(MapLineLayer);
         FeatureSet lineF = new FeatureSet(FeatureType.Line);
         int lineID = 0;
         bool firstClick = true;
         bool linemouseClick = false;
-        #endregion
 
-        #region 多边形形状文件类级变量
         FeatureSet polygonF = new FeatureSet(FeatureType.Polygon);
         int polygonID = 0;
         bool polygonmouseClick = false;
@@ -65,7 +50,6 @@ namespace 集成
         public gis软件()
         {
             InitializeComponent();
-            // 手动绑定设计器中可能丢失的事件
             BindMenuEvents();
         }
 
@@ -76,29 +60,22 @@ namespace 集成
             this.平移ToolStripMenuItem.Click += new EventHandler(k平移_Click);
             this.还原ToolStripMenuItem.Click += new EventHandler(k缩放至图层_Click);
             this.取消操作ToolStripMenuItem.Click += new EventHandler(k取消_Click);
-
-            // 确保 MouseUp 事件已绑定（用于栅格查询）
             this.map1.MouseUp += new MouseEventHandler(map1_MouseUp);
         }
 
-        // 重置工具状态，防止逻辑冲突
         private void ResetToolState()
         {
             map1.Cursor = Cursors.Arrow;
             map1.FunctionMode = FunctionMode.None;
             shapeType = "";
-
             pointmouseClick = false;
             linemouseClick = false;
             polygonmouseClick = false;
-
             hikingpathPathFinished = true;
             firstClick = true;
         }
 
-        // ---------------------------------------------------------
-        // 新增辅助方法：统一处理保存逻辑 (符合三层架构 UI -> BLL)
-        // ---------------------------------------------------------
+        // 保存逻辑 (UI -> BLL)
         private void SaveFeatureSet(IFeatureSet fs, string defaultName)
         {
             if (fs == null || fs.Features.Count == 0)
@@ -107,7 +84,6 @@ namespace 集成
                 return;
             }
 
-            // 1. UI 层负责交互：询问用户存到哪里
             SaveFileDialog sfd = new SaveFileDialog();
             sfd.FileName = defaultName;
             sfd.Filter = "Shapefiles (*.shp)|*.shp";
@@ -116,7 +92,6 @@ namespace 集成
             {
                 try
                 {
-                    // 2. 将路径传递给 BLL 层进行处理
                     _gisService.SaveShapefile(fs, sfd.FileName);
                     MessageBox.Show("保存成功！");
                 }
@@ -127,64 +102,25 @@ namespace 集成
             }
         }
 
-        #region 基础地图操作 (放大/缩小/平移)
-        private void k放大_Click(object sender, EventArgs e)
-        {
-            ResetToolState();
-            map1.ZoomIn();
-        }
-
-        private void k缩小_Click(object sender, EventArgs e)
-        {
-            ResetToolState();
-            map1.ZoomOut();
-        }
-
-        private void k平移_Click(object sender, EventArgs e)
-        {
-            ResetToolState();
-            map1.FunctionMode = FunctionMode.Pan;
-        }
-
-        private void k选择_Click(object sender, EventArgs e)
-        {
-            ResetToolState();
-            map1.FunctionMode = FunctionMode.Select;
-        }
-
-        private void k缩放至图层_Click(object sender, EventArgs e)
-        {
-            map1.ZoomToMaxExtent();
-        }
-
-        private void k取消_Click(object sender, EventArgs e)
-        {
-            ResetToolState();
-        }
+        #region 基础地图操作
+        private void k放大_Click(object sender, EventArgs e) { ResetToolState(); map1.ZoomIn(); }
+        private void k缩小_Click(object sender, EventArgs e) { ResetToolState(); map1.ZoomOut(); }
+        private void k平移_Click(object sender, EventArgs e) { ResetToolState(); map1.FunctionMode = FunctionMode.Pan; }
+        private void k选择_Click(object sender, EventArgs e) { ResetToolState(); map1.FunctionMode = FunctionMode.Select; }
+        private void k缩放至图层_Click(object sender, EventArgs e) { map1.ZoomToMaxExtent(); }
+        private void k取消_Click(object sender, EventArgs e) { ResetToolState(); }
         #endregion
 
         #region 文件操作
-        private void 矢量图形ToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            map1.AddLayer();
-        }
-
-        private void 栅格图像ToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            map1.AddRasterLayer();
-        }
-
-        private void 退出ToolStripMenuItem2_Click(object sender, EventArgs e)
-        {
-            Application.Exit();
-        }
+        private void 矢量图形ToolStripMenuItem_Click(object sender, EventArgs e) { map1.AddLayer(); }
+        private void 栅格图像ToolStripMenuItem_Click(object sender, EventArgs e) { map1.AddRasterLayer(); }
+        private void 退出ToolStripMenuItem2_Click(object sender, EventArgs e) { Application.Exit(); }
         #endregion
 
-        #region 鼠标绘图逻辑
+        #region 鼠标绘图逻辑 (包含徒步路径绘制)
         private void map1_MouseDown(object sender, MouseEventArgs e)
         {
             if (map1.FunctionMode != FunctionMode.None) return;
-
             Coordinate coord = map1.PixelToProj(e.Location);
 
             switch (shapeType)
@@ -198,46 +134,11 @@ namespace 集成
                         currentFeature.DataRow["PointID"] = pointID;
                         map1.ResetBuffer();
                     }
-                    else if (e.Button == MouseButtons.Right)
-                    {
-                        map1.Cursor = Cursors.Default;
-                        pointmouseClick = false;
-                        shapeType = "";
-                    }
+                    else if (e.Button == MouseButtons.Right) { map1.Cursor = Cursors.Default; pointmouseClick = false; shapeType = ""; }
                     break;
 
                 case "line":
-                    if (e.Button == MouseButtons.Left && linemouseClick)
-                    {
-                        if (firstClick)
-                        {
-                            List<Coordinate> lineArray = new List<Coordinate>();
-                            LineString lineGeometry = new LineString(lineArray);
-                            IFeature lineFeature = lineF.AddFeature(lineGeometry);
-                            lineFeature.Coordinates.Add(coord);
-                            lineID++;
-                            lineFeature.DataRow["LineID"] = lineID;
-                            firstClick = false;
-                        }
-                        else
-                        {
-                            if (lineF.Features.Count > 0)
-                            {
-                                IFeature existingFeature = lineF.Features[lineF.Features.Count - 1];
-                                existingFeature.Coordinates.Add(coord);
-                                if (existingFeature.Coordinates.Count >= 2)
-                                {
-                                    lineF.InitializeVertices();
-                                    map1.ResetBuffer();
-                                }
-                            }
-                        }
-                    }
-                    else if (e.Button == MouseButtons.Right)
-                    {
-                        firstClick = true;
-                        map1.ResetBuffer();
-                    }
+                    HandleLineDrawing(e, coord, lineF, ref lineID, "LineID");
                     break;
 
                 case "polygon":
@@ -259,58 +160,24 @@ namespace 集成
                             {
                                 IFeature existingFeature = polygonF.Features[polygonF.Features.Count - 1];
                                 existingFeature.Coordinates.Add(coord);
-                                if (existingFeature.Coordinates.Count >= 3)
-                                {
-                                    polygonF.InitializeVertices();
-                                    map1.ResetBuffer();
-                                }
+                                if (existingFeature.Coordinates.Count >= 3) { polygonF.InitializeVertices(); map1.ResetBuffer(); }
                             }
                         }
                     }
-                    else if (e.Button == MouseButtons.Right)
-                    {
-                        firstClick = true;
-                    }
+                    else if (e.Button == MouseButtons.Right) { firstClick = true; }
                     break;
 
                 case "hikingPath":
                     if (hikingpathPathFinished) return;
-
                     if (e.Button == MouseButtons.Left)
                     {
-                        if (firstClick)
-                        {
-                            List<Coordinate> lineArray = new List<Coordinate>();
-                            LineString lineGeometry = new LineString(lineArray);
-                            IFeature lineFeature = lineF.AddFeature(lineGeometry);
-                            lineFeature.Coordinates.Add(coord);
-                            lineID++;
-                            lineFeature.DataRow["ID"] = lineID;
-                            firstClick = false;
-                        }
-                        else
-                        {
-                            if (lineF.Features.Count > 0)
-                            {
-                                IFeature existingFeature = lineF.Features[lineF.Features.Count - 1];
-                                existingFeature.Coordinates.Add(coord);
-                                if (existingFeature.Coordinates.Count >= 2)
-                                {
-                                    lineF.InitializeVertices();
-                                    map1.ResetBuffer();
-                                }
-                            }
-                        }
+                        HandleLineDrawing(e, coord, lineF, ref lineID, "ID");
                     }
                     else if (e.Button == MouseButtons.Right)
                     {
-                        // 结束绘制并保存
                         firstClick = true;
                         map1.ResetBuffer();
-
-                        // 使用新的保存方法，弹出对话框
                         SaveFeatureSet(lineF, "hiking_path.shp");
-
                         map1.Cursor = Cursors.Arrow;
                         hikingpathPathFinished = true;
                         shapeType = "";
@@ -318,116 +185,93 @@ namespace 集成
                     break;
             }
         }
+
+        private void HandleLineDrawing(MouseEventArgs e, Coordinate coord, FeatureSet fs, ref int idCounter, string idField)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                if (firstClick)
+                {
+                    List<Coordinate> lineArray = new List<Coordinate>();
+                    LineString lineGeometry = new LineString(lineArray);
+                    IFeature lineFeature = fs.AddFeature(lineGeometry);
+                    lineFeature.Coordinates.Add(coord);
+                    idCounter++;
+                    lineFeature.DataRow[idField] = idCounter;
+                    firstClick = false;
+                }
+                else
+                {
+                    if (fs.Features.Count > 0)
+                    {
+                        IFeature existingFeature = fs.Features[fs.Features.Count - 1];
+                        existingFeature.Coordinates.Add(coord);
+                        if (existingFeature.Coordinates.Count >= 2) { fs.InitializeVertices(); map1.ResetBuffer(); }
+                    }
+                }
+            }
+            else if (e.Button == MouseButtons.Right) { firstClick = true; map1.ResetBuffer(); }
+        }
         #endregion
 
         #region 工具栏菜单点击事件
         private void 添加点ToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ResetToolState();
-            map1.Cursor = Cursors.Cross;
-            shapeType = "Point";
-
-            pointF = new FeatureSet(FeatureType.Point);
-            pointF.Projection = map1.Projection;
-            if (!pointF.DataTable.Columns.Contains("PointID"))
-                pointF.DataTable.Columns.Add(new DataColumn("PointID"));
-
+            ResetToolState(); map1.Cursor = Cursors.Cross; shapeType = "Point";
+            pointF = new FeatureSet(FeatureType.Point); pointF.Projection = map1.Projection;
+            if (!pointF.DataTable.Columns.Contains("PointID")) pointF.DataTable.Columns.Add(new DataColumn("PointID"));
             MapPointLayer pointLayer = (MapPointLayer)map1.Layers.Add(pointF);
-            PointSymbolizer symbol = new PointSymbolizer(Color.Red, DotSpatial.Symbology.PointShape.Ellipse, 3);
-            pointLayer.Symbolizer = symbol;
+            pointLayer.Symbolizer = new PointSymbolizer(Color.Red, DotSpatial.Symbology.PointShape.Ellipse, 3);
             pointLayer.LegendText = "point";
-
             pointmouseClick = true;
         }
 
         private void 添加线ToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ResetToolState();
-            map1.Cursor = Cursors.Cross;
-            shapeType = "line";
-
-            lineF = new FeatureSet(FeatureType.Line);
-            lineF.Projection = map1.Projection;
-            if (!lineF.DataTable.Columns.Contains("LineID"))
-                lineF.DataTable.Columns.Add(new DataColumn("LineID"));
-
+            ResetToolState(); map1.Cursor = Cursors.Cross; shapeType = "line";
+            lineF = new FeatureSet(FeatureType.Line); lineF.Projection = map1.Projection;
+            if (!lineF.DataTable.Columns.Contains("LineID")) lineF.DataTable.Columns.Add(new DataColumn("LineID"));
             lineLayer = (MapLineLayer)map1.Layers.Add(lineF);
-            LineSymbolizer symbol = new LineSymbolizer(Color.Blue, 2);
-            lineLayer.Symbolizer = symbol;
+            lineLayer.Symbolizer = new LineSymbolizer(Color.Blue, 2);
             lineLayer.LegendText = "line";
-
-            firstClick = true;
-            linemouseClick = true;
+            firstClick = true; linemouseClick = true;
         }
 
         private void 添加面ToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            ResetToolState();
-            map1.Cursor = Cursors.Cross;
-            shapeType = "polygon";
-
-            polygonF = new FeatureSet(FeatureType.Polygon);
-            polygonF.Projection = map1.Projection;
-            if (!polygonF.DataTable.Columns.Contains("PolygonID"))
-                polygonF.DataTable.Columns.Add(new DataColumn("PolygonID"));
-
+            ResetToolState(); map1.Cursor = Cursors.Cross; shapeType = "polygon";
+            polygonF = new FeatureSet(FeatureType.Polygon); polygonF.Projection = map1.Projection;
+            if (!polygonF.DataTable.Columns.Contains("PolygonID")) polygonF.DataTable.Columns.Add(new DataColumn("PolygonID"));
             MapPolygonLayer polygonLayer = (MapPolygonLayer)map1.Layers.Add(polygonF);
-            PolygonSymbolizer symbol = new PolygonSymbolizer(Color.Green);
-            polygonLayer.Symbolizer = symbol;
+            polygonLayer.Symbolizer = new PolygonSymbolizer(Color.Green);
             polygonLayer.LegendText = "polygon";
-
-            firstClick = true;
-            polygonmouseClick = true;
+            firstClick = true; polygonmouseClick = true;
         }
 
         private void 绘制徒步路径ToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ResetToolState();
-            map1.Cursor = Cursors.Cross;
-            shapeType = "hikingPath";
-            hikingpathPathFinished = false;
-
-            lineF = new FeatureSet(FeatureType.Line);
-            lineF.Projection = map1.Projection;
-            if (!lineF.DataTable.Columns.Contains("ID"))
-                lineF.DataTable.Columns.Add(new DataColumn("ID"));
-
+            ResetToolState(); map1.Cursor = Cursors.Cross; shapeType = "hikingPath"; hikingpathPathFinished = false;
+            lineF = new FeatureSet(FeatureType.Line); lineF.Projection = map1.Projection;
+            if (!lineF.DataTable.Columns.Contains("ID")) lineF.DataTable.Columns.Add(new DataColumn("ID"));
             lineLayer = (MapLineLayer)map1.Layers.Add(lineF);
-            LineSymbolizer symbol = new LineSymbolizer(Color.Blue, 2);
-            lineLayer.Symbolizer = symbol;
-            lineLayer.LegendText = "徒步路径（Hiking path）";
-
+            lineLayer.Symbolizer = new LineSymbolizer(Color.Blue, 2);
+            lineLayer.LegendText = "徒步路径（Hiking path）"; // 确保名称唯一，用于后续查找
             firstClick = true;
         }
         #endregion
 
-        #region 保存操作 (修正为 UI -> BLL)
-        private void 保存点ToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            SaveFeatureSet(pointF, "point.shp");
-            ResetToolState();
-        }
-
-        private void 保存线ToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            SaveFeatureSet(lineF, "line.shp");
-            ResetToolState();
-        }
-
-        private void 保存面ToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            SaveFeatureSet(polygonF, "polygon.shp");
-            ResetToolState();
-        }
+        #region 保存操作
+        private void 保存点ToolStripMenuItem_Click(object sender, EventArgs e) { SaveFeatureSet(pointF, "point.shp"); ResetToolState(); }
+        private void 保存线ToolStripMenuItem_Click(object sender, EventArgs e) { SaveFeatureSet(lineF, "line.shp"); ResetToolState(); }
+        private void 保存面ToolStripMenuItem_Click(object sender, EventArgs e) { SaveFeatureSet(polygonF, "polygon.shp"); ResetToolState(); }
         #endregion
 
-        #region 核心业务逻辑 (使用 BLL)
+        #region 核心业务逻辑 (修复 Bug)
 
         private void 计算徒步路径ToolStripMenuItem_Click(object sender, EventArgs e)
         {
             try
             {
-                // 1. 获取输入数据 (UI 职责)
                 if (map1.GetRasterLayers().Count() == 0)
                 {
                     MessageBox.Show("请添加栅格图层（DEM）。");
@@ -435,19 +279,19 @@ namespace 集成
                 }
                 var demLayer = map1.GetRasterLayers()[0];
 
-                if (map1.GetLineLayers().Count() == 0)
+                // 修复：不使用 Last()，而是根据 LegendText 精确查找徒步路径图层
+                var pathLayer = map1.GetLineLayers().FirstOrDefault(l => l.LegendText == "徒步路径（Hiking path）");
+
+                if (pathLayer == null || pathLayer.DataSet.Features.Count == 0)
                 {
-                    MessageBox.Show("请绘制徒步路径。");
+                    MessageBox.Show("请先绘制徒步路径！");
                     return;
                 }
-                var pathLayer = map1.GetLineLayers().Last();
-                if (pathLayer.DataSet.Features.Count == 0) return;
 
-                // 2. 调用 BLL 计算
-                var pathFeature = pathLayer.DataSet.Features[0];
+                // 调用 BLL
+                var pathFeature = pathLayer.DataSet.Features[0]; // 获取第一条路径
                 List<PathPoint> resultList = _gisService.CalculateHikingProfile(pathFeature, demLayer.DataSet);
 
-                // 3. 显示结果 (UI 职责)
                 Form3 graphForm = new Form3(resultList);
                 graphForm.Show();
             }
@@ -463,27 +307,18 @@ namespace 集成
             if (layer == null && map1.Layers.Count > 0) layer = map1.Layers[0] as IMapRasterLayer;
             if (layer == null) { MessageBox.Show("请选择栅格图层。"); return; }
 
-            // UI 获取路径
             SaveFileDialog sfd = new SaveFileDialog();
             sfd.Filter = "Binary Grid (*.bgd)|*.bgd";
             if (sfd.ShowDialog() != DialogResult.OK) return;
 
             try
             {
-                // 调用 BLL (BLL负责计算并创建文件)
                 IRaster resultRaster = _gisService.MultiplyRaster(layer.DataSet, 2.0, sfd.FileName);
-
-                // 确保数据写入磁盘
                 _gisService.SaveRaster(resultRaster);
-
-                // 添加到地图显示
                 map1.Layers.Add(resultRaster);
                 MessageBox.Show("计算完成。");
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("错误: " + ex.Message);
-            }
+            catch (Exception ex) { MessageBox.Show("错误: " + ex.Message); }
         }
 
         private void 栅格重分类ToolStripMenuItem_Click(object sender, EventArgs e)
@@ -492,32 +327,20 @@ namespace 集成
             if (layer == null) { MessageBox.Show("请在图例中选择一个栅格图层。"); return; }
 
             double threshold = 0;
-            if (!double.TryParse(txtElevation.Text, out threshold))
-            {
-                MessageBox.Show("请输入有效数字。"); return;
-            }
+            if (!double.TryParse(txtElevation.Text, out threshold)) { MessageBox.Show("请输入有效数字。"); return; }
 
-            // UI 获取路径
             SaveFileDialog sfd = new SaveFileDialog();
             sfd.Filter = "Binary Grid (*.bgd)|*.bgd";
             if (sfd.ShowDialog() != DialogResult.OK) return;
 
             try
             {
-                // 调用 BLL
                 IRaster resultRaster = _gisService.ReclassifyRaster(layer.DataSet, threshold, sfd.FileName);
-
-                // 确保数据写入磁盘
                 _gisService.SaveRaster(resultRaster);
-
-                // 添加到地图显示
                 map1.Layers.Add(resultRaster);
                 MessageBox.Show("重分类完成。");
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("错误: " + ex.Message);
-            }
+            catch (Exception ex) { MessageBox.Show("错误: " + ex.Message); }
         }
         #endregion
 
@@ -531,17 +354,11 @@ namespace 集成
         private void 快捷查看ToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (map1.Layers.SelectedLayer is MapPolygonLayer selectedLayer)
-            {
                 属性表.DataSource = selectedLayer.DataSet.DataTable;
-            }
             else if (map1.Layers.Count > 0 && map1.Layers[0] is MapPolygonLayer layer0)
-            {
                 属性表.DataSource = layer0.DataSet.DataTable;
-            }
             else
-            {
                 MessageBox.Show("请选择一个面图层进行查看。");
-            }
         }
 
         private void 投影探索工具ToolStripMenuItem_Click(object sender, EventArgs e)
@@ -571,14 +388,8 @@ namespace 集成
                 try
                 {
                     ColorScheme scheme = new ColorScheme();
-                    ColorCategory category1 = new ColorCategory(2500, 3000, Color.Red, Color.Yellow);
-                    category1.LegendText = "High Elevation";
-                    scheme.AddCategory(category1);
-
-                    ColorCategory category2 = new ColorCategory(1000, 2500, Color.Blue, Color.Green);
-                    category2.LegendText = "Low Elevation";
-                    scheme.AddCategory(category2);
-
+                    scheme.AddCategory(new ColorCategory(2500, 3000, Color.Red, Color.Yellow) { LegendText = "High Elevation" });
+                    scheme.AddCategory(new ColorCategory(1000, 2500, Color.Blue, Color.Green) { LegendText = "Low Elevation" });
                     layer.Symbolizer.Scheme = scheme;
                     layer.WriteBitmap();
                     map1.Refresh();
@@ -590,15 +401,8 @@ namespace 集成
 
         private void chbRasterValue_CheckedChanged(object sender, EventArgs e)
         {
-            if (chbRasterValue.Checked)
-            {
-                ResetToolState();
-                map1.Cursor = Cursors.Cross;
-            }
-            else
-            {
-                map1.Cursor = Cursors.Arrow;
-            }
+            if (chbRasterValue.Checked) { ResetToolState(); map1.Cursor = Cursors.Cross; }
+            else map1.Cursor = Cursors.Arrow;
         }
 
         private void map1_MouseUp(object sender, MouseEventArgs e)
@@ -608,7 +412,6 @@ namespace 集成
                 IRaster raster = rasterLayer.DataSet;
                 Coordinate coord = map1.PixelToProj(e.Location);
                 RcIndex rc = raster.Bounds.ProjToCell(coord);
-
                 if (rc.Row >= 0 && rc.Row < raster.NumRows && rc.Column >= 0 && rc.Column < raster.NumColumns)
                 {
                     double val = raster.Value[rc.Row, rc.Column];
@@ -618,7 +421,7 @@ namespace 集成
         }
         #endregion
 
-        // 空事件处理（保持完整性）
+        // 空事件处理
         private void groupBox1_Enter(object sender, EventArgs e) { }
         private void txtElevation_TextChanged(object sender, EventArgs e) { }
         private void label1_Click(object sender, EventArgs e) { }

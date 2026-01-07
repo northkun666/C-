@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq; // 用于 SelectIndexByAttribute 等查询
 using DotSpatial.Data;     // 核心数据接口 (IRaster, IFeatureSet 等)
 using DotSpatial.Topology; // 几何类型 (Coordinate, Point 等)
 using 集成.Models;         // 引入 PathPoint 模型
@@ -19,7 +20,10 @@ namespace 集成.BLL
         /// </summary>
         public void SaveShapefile(IFeatureSet fs, string filePath)
         {
-            // 这里可以添加业务验证逻辑，例如检查属性表完整性等
+            // 这里可以添加业务验证逻辑
+            if (fs == null || fs.Features.Count == 0)
+                throw new Exception("没有可保存的要素。");
+
             _fileRepo.SaveShapefile(fs, filePath);
         }
 
@@ -33,17 +37,61 @@ namespace 集成.BLL
 
         #endregion
 
+        #region 面积计算逻辑 (从 FormProjection 迁移过来)
+
+        /// <summary>
+        /// 计算矢量图层中所有要素的总面积
+        /// </summary>
+        public double CalculateTotalArea(IFeatureSet featureSet)
+        {
+            double totalArea = 0;
+            if (featureSet != null)
+            {
+                foreach (IFeature feature in featureSet.Features)
+                {
+                    // 注意：面积单位取决于投影坐标系
+                    totalArea += feature.Area();
+                }
+            }
+            return totalArea;
+        }
+
+        /// <summary>
+        /// 根据属性查询计算特定区域的面积
+        /// </summary>
+        public double CalculateRegionArea(IFeatureSet featureSet, string fieldName, string value)
+        {
+            double area = 0;
+            if (featureSet != null)
+            {
+                // 使用 SelectByAttribute 获取符合条件的要素索引
+                // 注意：为了不影响 UI 的选中状态，我们只获取索引进行计算，或者需要 UI 层配合清除选中
+                // 这里使用纯数据逻辑：遍历查找
+
+                // 方法A: 遍历所有要素 (性能较低但稳定)
+                foreach (IFeature feature in featureSet.Features)
+                {
+                    if (feature.DataRow[fieldName].ToString() == value)
+                    {
+                        area += feature.Area();
+                    }
+                }
+            }
+            return area;
+        }
+
+        #endregion
+
         #region 徒步路径计算逻辑
 
         // 辅助方法：从两点线段中按步长提取高程点
-        // ★★★ 修正点：参数改为 IRaster，与 UI 控件解耦 ★★★
         private List<PathPoint> ExtractElevationSegment(double startX, double startY, double endX, double endY, IRaster raster)
         {
             double curX = startX;
             double curY = startY;
             double curElevation = 0;
             List<PathPoint> pathPointList = new List<PathPoint>();
-            int numberofpoints = 100; // 采样点数量，可根据需要调整
+            int numberofpoints = 100; // 采样点数量
             double constXdif = ((endX - startX) / numberofpoints);
             double constYdif = ((endY - startY) / numberofpoints);
 
@@ -83,11 +131,12 @@ namespace 集成.BLL
         /// <summary>
         /// 计算完整的徒步路径剖面
         /// </summary>
-        /// <param name="pathFeature">路径要素 (Line)</param>
-        /// <param name="demRaster">高程数据 (IRaster)</param>
-        /// <returns>包含距离和高程的点列表</returns>
         public List<PathPoint> CalculateHikingProfile(IFeature pathFeature, IRaster demRaster)
         {
+            // 建议添加投影一致性检查
+            if (pathFeature == null || demRaster == null)
+                throw new Exception("路径或高程数据为空");
+
             IList<Coordinate> coordinateList = pathFeature.Coordinates;
             List<PathPoint> fullPathList = new List<PathPoint>();
 
@@ -96,12 +145,11 @@ namespace 集成.BLL
             {
                 Coordinate start = coordinateList[i];
                 Coordinate end = coordinateList[i + 1];
-                // 调用辅助方法
                 var segment = ExtractElevationSegment(start.X, start.Y, end.X, end.Y, demRaster);
                 fullPathList.AddRange(segment);
             }
 
-            // 2. 计算累计距离 (用于 X 轴显示)
+            // 2. 计算累计距离
             double distanceFromStart = 0;
             for (int i = 1; i < fullPathList.Count; i++)
             {
@@ -123,19 +171,16 @@ namespace 集成.BLL
         #region 栅格运算逻辑
 
         /// <summary>
-        /// 栅格乘法 (每个像素值 * 倍数)
+        /// 栅格乘法
         /// </summary>
         public IRaster MultiplyRaster(IRaster sourceRaster, double multiplier, string outFileName)
         {
-            // 调用 DAL 创建结果文件结构
             IRaster newRaster = _fileRepo.CreateResultRaster(outFileName, sourceRaster.NumColumns, sourceRaster.NumRows, sourceRaster.DataType, new string[0]);
 
-            // 复制元数据
             newRaster.Bounds = sourceRaster.Bounds.Copy();
             newRaster.NoDataValue = sourceRaster.NoDataValue;
             newRaster.Projection = sourceRaster.Projection;
 
-            // 执行计算
             for (int r = 0; r < sourceRaster.NumRows; r++)
             {
                 for (int c = 0; c < sourceRaster.NumColumns; c++)
@@ -151,19 +196,16 @@ namespace 集成.BLL
         }
 
         /// <summary>
-        /// 栅格重分类 (大于阈值设为1，否则设为0)
+        /// 栅格重分类
         /// </summary>
         public IRaster ReclassifyRaster(IRaster sourceRaster, double threshold, string outFileName)
         {
-            // 调用 DAL 创建结果文件结构
             IRaster newRaster = _fileRepo.CreateResultRaster(outFileName, sourceRaster.NumColumns, sourceRaster.NumRows, sourceRaster.DataType, new string[0]);
 
-            // 复制元数据
             newRaster.Bounds = sourceRaster.Bounds.Copy();
             newRaster.NoDataValue = sourceRaster.NoDataValue;
             newRaster.Projection = sourceRaster.Projection;
 
-            // 执行计算
             for (int r = 0; r < sourceRaster.NumRows; r++)
             {
                 for (int c = 0; c < sourceRaster.NumColumns; c++)
