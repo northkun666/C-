@@ -216,7 +216,7 @@ namespace 集成
             if (!pointF.DataTable.Columns.Contains("PointID")) pointF.DataTable.Columns.Add(new DataColumn("PointID"));
             MapPointLayer pointLayer = (MapPointLayer)map1.Layers.Add(pointF);
             pointLayer.Symbolizer = new PointSymbolizer(Color.Red, DotSpatial.Symbology.PointShape.Ellipse, 3);
-            pointLayer.LegendText = "point";
+            pointLayer.LegendText = "点图层";
             pointmouseClick = true;
         }
 
@@ -227,7 +227,7 @@ namespace 集成
             if (!lineF.DataTable.Columns.Contains("LineID")) lineF.DataTable.Columns.Add(new DataColumn("LineID"));
             lineLayer = (MapLineLayer)map1.Layers.Add(lineF);
             lineLayer.Symbolizer = new LineSymbolizer(Color.Blue, 2);
-            lineLayer.LegendText = "line";
+            lineLayer.LegendText = "线图层";
             firstClick = true; linemouseClick = true;
         }
 
@@ -238,7 +238,7 @@ namespace 集成
             if (!polygonF.DataTable.Columns.Contains("PolygonID")) polygonF.DataTable.Columns.Add(new DataColumn("PolygonID"));
             MapPolygonLayer polygonLayer = (MapPolygonLayer)map1.Layers.Add(polygonF);
             polygonLayer.Symbolizer = new PolygonSymbolizer(Color.Green);
-            polygonLayer.LegendText = "polygon";
+            polygonLayer.LegendText = "面图层";
             firstClick = true; polygonmouseClick = true;
         }
 

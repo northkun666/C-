@@ -124,14 +124,12 @@ namespace 集成.BLL
         }
         public List<PathPoint> CalculateHikingProfile(IFeature pathFeature, IRaster demRaster)
         {
-            // 建议添加投影一致性检查
             if (pathFeature == null || demRaster == null)
                 throw new Exception("路径或高程数据为空");
 
             IList<Coordinate> coordinateList = pathFeature.Coordinates;
             List<PathPoint> fullPathList = new List<PathPoint>();
 
-            // 1. 遍历线段提取高程
             for (int i = 0; i < coordinateList.Count - 1; i++)
             {
                 Coordinate start = coordinateList[i];

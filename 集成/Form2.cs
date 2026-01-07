@@ -49,12 +49,13 @@ namespace 集成
                 MessageBox.Show("请先在地图中添加或选择一个面图层（Polygon Layer）。");
         }
 
+
         private void b图层_Click(object sender, EventArgs e)
         {
             var layer = GetTargetLayer();
             if (layer == null)
             {
-                MessageBox.Show("未找到面图层。");
+                MessageBox.Show("未找到面图层，请先在地图中添加并选中一个面图层。");
                 return;
             }
 
@@ -68,14 +69,22 @@ namespace 集成
             if (layer.DataSet.DataTable.Columns.Contains(attributeName))
             {
                 string labelExpression = string.Format("[{0}]", attributeName);
+                for (int i = _gisForm.Map1.Layers.Count - 1; i >= 0; i--)
+                {
+                    var l = _gisForm.Map1.Layers[i];
 
-                _gisForm.Map1.ClearLabels(layer);
+                    if (l is MapLabelLayer labelLayerOld && labelLayerOld.FeatureLayer == layer)
+                    {
+                        _gisForm.Map1.Layers.Remove(l);
+                    }
+                }
+
 
                 MapLabelLayer labelLayer = new MapLabelLayer(layer);
 
+
                 ILabelCategory category = labelLayer.Symbology.Categories[0];
                 category.Expression = labelExpression;
-
                 category.Symbolizer.FontFamily = _currentFont.FontFamily.Name;
                 category.Symbolizer.FontSize = _currentFont.Size;
                 category.Symbolizer.FontStyle = _currentFont.Style;
@@ -84,7 +93,10 @@ namespace 集成
 
                 _gisForm.Map1.Layers.Add(labelLayer);
 
-                MessageBox.Show($"已显示 [{attributeName}] 标签");
+                _gisForm.Map1.ResetBuffer();
+                _gisForm.Map1.Refresh();
+
+                MessageBox.Show($"已更新 [{attributeName}] 标签 (颜色: {_currentColor.Name}, 字号: {_currentFont.Size})");
             }
             else
             {
@@ -163,13 +175,42 @@ namespace 集成
             }
         }
 
+
+
         private void button1_Click(object sender, EventArgs e)
         {
             var layer = GetTargetLayer();
-            if (layer != null)
+            if (layer == null)
             {
-                _gisForm.Map1.ClearLabels(layer);
+                MessageBox.Show("未找到目标图层。");
+                return;
+            }
+
+            bool hasRemoved = false;
+
+
+            for (int i = _gisForm.Map1.Layers.Count - 1; i >= 0; i--)
+            {
+                var l = _gisForm.Map1.Layers[i];
+
+                if (l is MapLabelLayer labelLayer && labelLayer.FeatureLayer == layer)
+                {
+                    _gisForm.Map1.Layers.Remove(l);
+                    hasRemoved = true;
+                }
+            }
+
+            if (hasRemoved)
+            {
+
+                _gisForm.Map1.ResetBuffer(); 
+                _gisForm.Map1.Refresh();    
+
                 MessageBox.Show("已清除标签。");
+            }
+            else
+            {
+                MessageBox.Show("当前图层没有已显示的标签，或者标签未找到。");
             }
         }
 

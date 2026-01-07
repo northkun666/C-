@@ -48,10 +48,10 @@ namespace 集成
             map.Legend = null;
 
             lblProj = new Label { Text = title, ForeColor = Color.DarkRed, Font = new Font("Arial", 9F, FontStyle.Bold), Location = new Point(5, 205), AutoSize = true };
-            lblTotal = new Label { Text = "Total Area: -", Location = new Point(5, 230), AutoSize = true };
-            lblSelInfo = new Label { Text = "Area of Selected Region:", Location = new Point(5, 255), AutoSize = true, Visible = true };
+            lblTotal = new Label { Text = "总面积: -", Location = new Point(5, 230), AutoSize = true };
+            lblSelInfo = new Label { Text = "选中区域面积:", Location = new Point(5, 255), AutoSize = true, Visible = true };
             lblSelArea = new Label { Text = "0.00", Location = new Point(150, 255), AutoSize = true };
-            lblDiffInfo = new Label { Text = "Diff from base:", Location = new Point(5, 280), AutoSize = true, Visible = false };
+            lblDiffInfo = new Label { Text = "与基准差异:", Location = new Point(5, 280), AutoSize = true, Visible = false };
             lblDiffVal = new Label { Text = "0.00", Location = new Point(150, 280), AutoSize = true, Visible = false };
 
             if (!pnl.Controls.Contains(map)) pnl.Controls.Add(map);
@@ -125,6 +125,8 @@ namespace 集成
             map1.Layers.Clear(); map2.Layers.Clear(); map3.Layers.Clear();
             map4.Layers.Clear(); map5.Layers.Clear(); map6.Layers.Clear();
             cmbFiledName.Items.Clear(); cmbSelectedRegion.Items.Clear();
+            lbltotalAreaMap1.Text = "Total Area: -";
+            lblMap1SelectedArea.Text = "0.00";
         }
         #endregion
 
@@ -170,6 +172,7 @@ namespace 集成
         {
             if (map.Layers.Count > 0 && map.Layers[0] is MapPolygonLayer layer)
             {
+                layer.UnSelectAll();
                 double area = _gisService.CalculateRegionArea(layer.DataSet, field, val);
                 lbl.Text = area.ToString(map == map1 ? "N2" : "N0"); 
                 layer.SelectByAttribute($"[{field}] = '{val}'");
