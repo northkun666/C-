@@ -333,6 +333,62 @@ namespace 集成
             }
             catch (Exception ex) { MessageBox.Show("错误: " + ex.Message); }
         }
+        // 在 Form1.cs 中添加事件处理程序
+
+        private void 计算VRMLToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            // 1. 获取当前选中的栅格图层
+            IMapRasterLayer layer = map1.Layers.SelectedLayer as IMapRasterLayer;
+            if (layer == null && map1.Layers.Count > 0)
+                layer = map1.Layers[0] as IMapRasterLayer; // 如果没选中，默认取第一个
+
+            if (layer == null)
+            {
+                MessageBox.Show("请先加载并选择一个 DEM 栅格图层。");
+                return;
+            }
+
+            // 2. 询问保存路径
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.Filter = "Binary Grid (*.bgd)|*.bgd";
+            sfd.FileName = "VRML_Result.bgd";
+            sfd.Title = "保存 VRML 计算结果";
+
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    this.Cursor = Cursors.WaitCursor;
+
+                    // 1. 执行计算
+                    IRaster resultRaster = _gisService.CalculateVRML(layer.DataSet, sfd.FileName);
+
+                    // 2. 将结果加载回地图
+                    if (resultRaster != null)
+                    {
+                        IMapRasterLayer newLayer = map1.Layers.Add(resultRaster);
+                        newLayer.LegendText = "VRML (Local Ruggedness)";
+
+                        // --- [修改重点] 应用专门针对 VRML 的手动断点方案 ---
+                        newLayer.Symbolizer.Scheme = _gisService.GetVRMLScheme(resultRaster);
+
+                        // 3. 强制刷新图例和地图以显示新颜色
+                        newLayer.WriteBitmap(); // 重要：重新生成渲染位图
+                        map1.Refresh();
+
+                        MessageBox.Show("VRML 计算成功！\n已应用手动阈值 (0.001, 0.005, 0.01...) 进行符号化显示。");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("计算失败: " + ex.Message);
+                }
+                finally
+                {
+                    this.Cursor = Cursors.Default;
+                }
+            }
+        }
         #endregion
 
         #region 其他 UI 逻辑
